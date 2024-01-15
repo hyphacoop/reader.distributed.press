@@ -1,13 +1,7 @@
 <!DOCTYPE html>
 <title>Distributed Press Reader</title>
-<style>
-	@import url("./style.css")
-</style>
+<link rel="stylesheet" href="./style.css" />
 
-- TODO:
-- Load post from `window.location.searchParams.get("url")`
-- Fetch json
-- render content
-- fetch actor info and render it
-- refactor into reusable web component that takes the url as an attribute.
-- factor out the avatar/profile name rendering into a separate component that gets nested
+<div id="post-container"></div>
+
+<script type="module" src="./post.js"></script>
