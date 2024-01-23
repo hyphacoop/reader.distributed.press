@@ -33,6 +33,12 @@ function renderPost(jsonLdData) {
   const postContainer = document.getElementById("post-container");
   let contentHtml = "";
 
+  // Display actorInfo
+  if (jsonLdData.attributedTo) {
+    // Use the actor-info web component
+    contentHtml += `<actor-info url="${jsonLdData.attributedTo}"></actor-info>`;
+  }
+
   // Render the main fields
   contentHtml += jsonLdData.summary
     ? `<p><strong>Summary:</strong> ${jsonLdData.summary}</p>`
@@ -58,38 +64,7 @@ function renderPost(jsonLdData) {
   }
 
   postContainer.innerHTML = contentHtml;
-
-  // TODO: Fetch actor info and render it
-  // TODO: Refactor into reusable web component that takes the URL as an attribute
-  // TODO: Factor out the avatar/profile name rendering into a separate component
 }
-
-async function init() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let postUrl = urlParams.get("url");
-
-  if (!postUrl) {
-    // console.error('No post URL provided');
-    postUrl =
-      "ipfs://bafybeifslnipwp5uanmhkckokwuse7h5gfrrjzqq4jg5oxewxbzrdcdawu";
-  }
-
-  let htmlContent;
-  if (postUrl.startsWith("ipfs://")) {
-    htmlContent = await loadPostFromIpfs(postUrl);
-  } else {
-    htmlContent = await loadPost(postUrl);
-  }
-
-  const jsonLdUrl = await parsePostHtml(htmlContent);
-  if (jsonLdUrl) {
-    const jsonLdData = await fetchJsonLd(jsonLdUrl);
-    renderPost(jsonLdData);
-  } else {
-    console.error("JSON-LD URL not found in the post");
-  }
-}
-init();
 
 async function loadPostFromIpfs(ipfsUrl) {
   try {
@@ -114,3 +89,75 @@ async function loadPostFromIpfs(ipfsUrl) {
     console.error("Error fetching IPFS content via HTTP gateway:", error);
   }
 }
+
+async function fetchActorInfo(actorUrl) {
+  try {
+    const response = await fetch(actorUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching actor info:", error);
+  }
+}
+
+// Define a class for the <distributed-post> web component
+class DistributedPost extends HTMLElement {
+  static get observedAttributes() {
+    return ["url"];
+  }
+
+  connectedCallback() {
+    this.loadAndRenderPost(this.getAttribute("url"));
+  }
+
+  async loadAndRenderPost(postUrl) {
+    if (!postUrl) {
+      console.error("No post URL provided");
+      return;
+    }
+
+    let htmlContent;
+    if (postUrl.startsWith("ipfs://")) {
+      htmlContent = await loadPostFromIpfs(postUrl);
+    } else {
+      htmlContent = await loadPost(postUrl);
+    }
+
+    const jsonLdUrl = await parsePostHtml(htmlContent);
+    if (jsonLdUrl) {
+      const jsonLdData = await fetchJsonLd(jsonLdUrl);
+      this.innerHTML = renderPost(jsonLdData);
+    } else {
+      console.error("JSON-LD URL not found in the post");
+    }
+  }
+}
+
+// Register the new element with the browser
+customElements.define("distributed-post", DistributedPost);
+
+// Define a class for the <actor-info> web component
+class ActorInfo extends HTMLElement {
+  static get observedAttributes() {
+    return ["url"];
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "url" && newValue) {
+      this.fetchAndRenderActorInfo(newValue);
+    }
+  }
+
+  async fetchAndRenderActorInfo(url) {
+    const actorInfo = await fetchActorInfo(url);
+    if (actorInfo) {
+      // Render the actor's avatar and name
+      this.innerHTML = `<p>${actorInfo.name}</p><img src="${actorInfo.icon[0].url}" width="69" alt="${actorInfo.name}" /><p>${actorInfo.summary}</p>`;
+    }
+  }
+}
+
+// Register the new element with the browser
+customElements.define("actor-info", ActorInfo);
