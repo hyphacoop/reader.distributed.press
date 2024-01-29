@@ -48,43 +48,6 @@ async function fetchJsonLd(jsonLdUrl) {
   }
 }
 
-function renderPost(jsonLdData) {
-  const postContainer = document.getElementById("post-container");
-  let contentHtml = "";
-
-  // Display actorInfo
-  if (jsonLdData.attributedTo) {
-    // Use the actor-info web component
-    contentHtml += `<actor-info url="${jsonLdData.attributedTo}"></actor-info>`;
-  }
-
-  // Render the main fields
-  contentHtml += jsonLdData.summary
-    ? `<p><strong>Summary:</strong> ${jsonLdData.summary}</p>`
-    : "";
-  contentHtml += jsonLdData.published
-    ? `<p><strong>Published:</strong> ${jsonLdData.published}</p>`
-    : "";
-  contentHtml += jsonLdData.attributedTo
-    ? `<p><strong>Author:</strong> ${jsonLdData.attributedTo}</p>`
-    : "";
-  contentHtml += jsonLdData.content
-    ? `<p><strong>Content:</strong> ${jsonLdData.content}</p>`
-    : "";
-
-  // Handle sensitive content
-  if (jsonLdData.sensitive) {
-    contentHtml += `
-        <details>
-          <summary>Sensitive Content (click to view)</summary>
-          <p>${jsonLdData.sensitive}</p>
-        </details>
-      `;
-  }
-
-  postContainer.innerHTML = contentHtml;
-}
-
 async function loadPostFromIpfs(ipfsUrl) {
   try {
     // Try loading content using native IPFS URLs
@@ -152,7 +115,7 @@ class DistributedPost extends HTMLElement {
       const jsonLdUrl = await parsePostHtml(htmlContent);
       if (jsonLdUrl) {
         const jsonLdData = await fetchJsonLd(jsonLdUrl);
-        this.innerHTML = renderPost(jsonLdData);
+        this.renderPostContent(jsonLdData);
       } else {
         this.renderErrorContent("JSON-LD URL not found in the post");
       }
@@ -161,8 +124,50 @@ class DistributedPost extends HTMLElement {
     }
   }
 
+  renderPostContent(jsonLdData) {
+    // Clear existing content
+    this.innerHTML = "";
+
+    // Create elements for each field
+    if (jsonLdData.attributedTo) {
+      const actorInfo = document.createElement("actor-info");
+      actorInfo.setAttribute("url", jsonLdData.attributedTo);
+      this.appendChild(actorInfo);
+    }
+
+    this.appendField("Summary", jsonLdData.summary);
+    this.appendField("Published", jsonLdData.published);
+    this.appendField("Author", jsonLdData.attributedTo);
+    this.appendField("Content", jsonLdData.content);
+
+    if (jsonLdData.sensitive) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Sensitive Content (click to view)";
+      details.appendChild(summary);
+      const content = document.createElement("p");
+      content.textContent = jsonLdData.sensitive;
+      details.appendChild(content);
+      this.appendChild(details);
+    }
+  }
+
+  appendField(label, value) {
+    if (value) {
+      const p = document.createElement("p");
+      p.innerHTML = `<strong>${label}:</strong> ${value}`;
+      this.appendChild(p);
+    }
+  }
+
   renderErrorContent(errorMessage) {
-    this.innerHTML = renderError(errorMessage);
+    // Clear existing content
+    this.innerHTML = "";
+
+    const errorElement = document.createElement("p");
+    errorElement.className = "error";
+    errorElement.textContent = errorMessage;
+    this.appendChild(errorElement);
   }
 }
 
