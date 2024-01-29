@@ -20,7 +20,7 @@ async function parsePostHtml(htmlContent) {
 async function fetchJsonLd(jsonLdUrl) {
   try {
     const headers = new Headers({
-      "Accept": "application/ld+json"
+      Accept: "application/ld+json",
     });
 
     const response = await fetch(jsonLdUrl, { headers });
@@ -106,6 +106,10 @@ async function fetchActorInfo(actorUrl) {
   }
 }
 
+function renderError(message) {
+  return `<p class="error">${message}</p>`;
+}
+
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes() {
@@ -118,24 +122,32 @@ class DistributedPost extends HTMLElement {
 
   async loadAndRenderPost(postUrl) {
     if (!postUrl) {
-      console.error("No post URL provided");
+      this.renderErrorContent("No post URL provided");
       return;
     }
 
     let htmlContent;
-    if (postUrl.startsWith("ipfs://")) {
-      htmlContent = await loadPostFromIpfs(postUrl);
-    } else {
-      htmlContent = await loadPost(postUrl);
-    }
+    try {
+      if (postUrl.startsWith("ipfs://")) {
+        htmlContent = await loadPostFromIpfs(postUrl);
+      } else {
+        htmlContent = await loadPost(postUrl);
+      }
 
-    const jsonLdUrl = await parsePostHtml(htmlContent);
-    if (jsonLdUrl) {
-      const jsonLdData = await fetchJsonLd(jsonLdUrl);
-      this.innerHTML = renderPost(jsonLdData);
-    } else {
-      console.error("JSON-LD URL not found in the post");
+      const jsonLdUrl = await parsePostHtml(htmlContent);
+      if (jsonLdUrl) {
+        const jsonLdData = await fetchJsonLd(jsonLdUrl);
+        this.innerHTML = renderPost(jsonLdData);
+      } else {
+        this.renderErrorContent("JSON-LD URL not found in the post");
+      }
+    } catch (error) {
+      this.renderErrorContent(error.message);
     }
+  }
+
+  renderErrorContent(errorMessage) {
+    this.innerHTML = renderError(errorMessage);
   }
 }
 
@@ -155,10 +167,14 @@ class ActorInfo extends HTMLElement {
   }
 
   async fetchAndRenderActorInfo(url) {
-    const actorInfo = await fetchActorInfo(url);
-    if (actorInfo) {
-      // Render the actor's avatar and name
-      this.innerHTML = `<p>${actorInfo.name}</p><img src="${actorInfo.icon[0].url}" width="69" alt="${actorInfo.name}" /><p>${actorInfo.summary}</p>`;
+    try {
+      const actorInfo = await fetchActorInfo(url);
+      if (actorInfo) {
+        // Render the actor's avatar and name
+        this.innerHTML = `<p>${actorInfo.name}</p><img src="${actorInfo.icon[0].url}" width="69" alt="${actorInfo.name}" /><p>${actorInfo.summary}</p>`;
+      }
+    } catch (error) {
+      this.innerHTML = renderError(error.message);
     }
   }
 }
