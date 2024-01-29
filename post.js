@@ -19,7 +19,11 @@ async function parsePostHtml(htmlContent) {
 
 async function fetchJsonLd(jsonLdUrl) {
   try {
-    const response = await fetch(jsonLdUrl);
+    const headers = new Headers({
+      "Accept": "application/ld+json"
+    });
+
+    const response = await fetch(jsonLdUrl, { headers });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
