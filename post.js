@@ -1,10 +1,25 @@
 async function loadPost(url) {
   try {
-    const response = await fetch(url);
+    const headers = new Headers({
+      Accept: "application/activity+json, application/ld+json, text/html",
+    });
+
+    const response = await fetch(url, { headers });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    return await response.text();
+
+    const contentType = response.headers.get("content-type");
+    if (
+      contentType.includes("application/ld+json") ||
+      contentType.includes("application/activity+json")
+    ) {
+      // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
+      return await response.json();
+    } else {
+      // Return HTML content for further processing if the response is HTML
+      return await response.text();
+    }
   } catch (error) {
     console.error("Error fetching post:", error);
   }
