@@ -1,8 +1,9 @@
+const ACCEPT_HEADER =
+  "application/activity+json, application/ld+json, application/json, text/html";
+
 async function loadPost(url) {
   try {
-    const headers = new Headers({
-      Accept: "application/activity+json, application/ld+json, text/html",
-    });
+    const headers = new Headers({ Accept: ACCEPT_HEADER });
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
@@ -12,7 +13,8 @@ async function loadPost(url) {
     const contentType = response.headers.get("content-type");
     if (
       contentType.includes("application/ld+json") ||
-      contentType.includes("application/activity+json")
+      contentType.includes("application/activity+json") ||
+      contentType.includes("application/json")
     ) {
       // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
       return await response.json();
