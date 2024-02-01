@@ -85,7 +85,10 @@ async function fetchActorInfo(actorUrl) {
 }
 
 function renderError(message) {
-  return `<p class="error">${message}</p>`;
+  const errorElement = document.createElement("p");
+  errorElement.classList.add("error");
+  errorElement.textContent = message;
+  return errorElement;
 }
 
 // Define a class for the <distributed-post> web component
@@ -126,7 +129,9 @@ class DistributedPost extends HTMLElement {
 
   renderPostContent(jsonLdData) {
     // Clear existing content
-    this.innerHTML = "";
+    while (this.firstChild) {
+      this.removeChild(this.firstChild);
+    }
 
     // Create elements for each field
     if (jsonLdData.attributedTo) {
@@ -155,14 +160,19 @@ class DistributedPost extends HTMLElement {
   appendField(label, value) {
     if (value) {
       const p = document.createElement("p");
-      p.innerHTML = `<strong>${label}:</strong> ${value}`;
+      const strong = document.createElement("strong");
+      strong.textContent = `${label}:`;
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(` ${value}`));
       this.appendChild(p);
     }
   }
 
   renderErrorContent(errorMessage) {
     // Clear existing content
-    this.innerHTML = "";
+    while (this.firstChild) {
+      this.removeChild(this.firstChild);
+    }
 
     const errorElement = document.createElement("p");
     errorElement.className = "error";
@@ -191,10 +201,25 @@ class ActorInfo extends HTMLElement {
       const actorInfo = await fetchActorInfo(url);
       if (actorInfo) {
         // Render the actor's avatar and name
-        this.innerHTML = `<p>${actorInfo.name}</p><img src="${actorInfo.icon[0].url}" width="69" alt="${actorInfo.name}" /><p>${actorInfo.summary}</p>`;
+        // Clear existing content
+        while (this.firstChild) {
+          this.removeChild(this.firstChild);
+        }
+        const pName = document.createElement("p");
+        pName.textContent = actorInfo.name;
+        const img = document.createElement("img");
+        img.src = actorInfo.icon[0].url;
+        img.width = 69;
+        img.alt = actorInfo.name;
+        const pSummary = document.createElement("p");
+        pSummary.textContent = actorInfo.summary;
+        this.appendChild(pName);
+        this.appendChild(img);
+        this.appendChild(pSummary);
       }
     } catch (error) {
-      this.innerHTML = renderError(error.message);
+      const errorElement = renderError(error.message);
+      this.appendChild(errorElement);
     }
   }
 }
