@@ -48,29 +48,29 @@ async function fetchJsonLd(jsonLdUrl) {
   }
 }
 
-async function loadPostFromIpfs(ipfsUrl) {
-  try {
-    // Try loading content using native IPFS URLs
-    const nativeResponse = await fetch(ipfsUrl);
-    if (nativeResponse.ok) {
-      return await nativeResponse.text();
-    }
-  } catch (error) {
-    console.log("Native IPFS loading failed, trying HTTP gateway:", error);
-  }
+// async function loadPostFromIpfs(ipfsUrl) {
+//   try {
+//     // Try loading content using native IPFS URLs
+//     const nativeResponse = await fetch(ipfsUrl);
+//     if (nativeResponse.ok) {
+//       return await nativeResponse.text();
+//     }
+//   } catch (error) {
+//     console.log("Native IPFS loading failed, trying HTTP gateway:", error);
+//   }
 
-  // Fallback to loading content via an HTTP IPFS gateway
-  const gatewayUrl = ipfsUrl.replace("ipfs://", "https://dweb.link/ipfs/");
-  try {
-    const gatewayResponse = await fetch(gatewayUrl);
-    if (!gatewayResponse.ok) {
-      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
-    }
-    return await gatewayResponse.text();
-  } catch (error) {
-    console.error("Error fetching IPFS content via HTTP gateway:", error);
-  }
-}
+//   // Fallback to loading content via an HTTP IPFS gateway
+//   const gatewayUrl = ipfsUrl.replace("ipfs://", "https://dweb.link/ipfs/");
+//   try {
+//     const gatewayResponse = await fetch(gatewayUrl);
+//     if (!gatewayResponse.ok) {
+//       throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
+//     }
+//     return await gatewayResponse.text();
+//   } catch (error) {
+//     console.error("Error fetching IPFS content via HTTP gateway:", error);
+//   }
+// }
 
 async function fetchActorInfo(actorUrl) {
   try {
@@ -109,8 +109,16 @@ class DistributedPost extends HTMLElement {
 
     let htmlContent;
     try {
-      if (postUrl.startsWith("ipfs://")) {
-        htmlContent = await loadPostFromIpfs(postUrl);
+      // if (postUrl.startsWith("ipfs://")) {
+      //   htmlContent = await loadPostFromIpfs(postUrl);
+      // }
+      if (postUrl.startsWith("ipns://") || postUrl.startsWith("hyper://")) {
+        // Directly load content for ipns and hyper URLs
+        const nativeResponse = await fetch(postUrl);
+        if (!nativeResponse.ok) {
+          throw new Error(`HTTP error! Status: ${nativeResponse.status}`);
+        }
+        htmlContent = await nativeResponse.text();
       } else {
         htmlContent = await loadPost(postUrl);
       }
