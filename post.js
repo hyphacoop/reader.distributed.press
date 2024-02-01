@@ -18,9 +18,27 @@ async function loadPost(url) {
     ) {
       // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
       return await response.json();
-    } else {
-      // Return HTML content for further processing if the response is HTML
-      return await response.text();
+    } else if (contentType.includes("text/html")) {
+      // For HTML responses, look for the link in the HTTP headers
+      const linkHeader = response.headers.get("Link");
+      if (linkHeader) {
+        const matches = linkHeader.match(
+          /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
+        );
+        if (matches && matches[1]) {
+          // Found JSON-LD link in headers, fetch that URL
+          return fetchJsonLd(matches[1]);
+        }
+      }
+      // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
+      const htmlContent = await response.text();
+      const jsonLdUrl = await parsePostHtml(htmlContent);
+      if (jsonLdUrl) {
+        // Found JSON-LD link in HTML, fetch that URL
+        return fetchJsonLd(jsonLdUrl);
+      }
+      // No JSON-LD link found in HTML
+      throw new Error("No JSON-LD link found in the response");
     }
   } catch (error) {
     console.error("Error fetching post:", error);
