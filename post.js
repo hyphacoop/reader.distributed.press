@@ -80,7 +80,7 @@ async function fetchJsonLd(jsonLdUrl) {
 //   }
 
 //   // Fallback to loading content via an HTTP IPFS gateway
-//   const gatewayUrl = ipfsUrl.replace("ipfs://", "https://dweb.link/ipfs/");
+//   const gatewayUrl = ipfsUrl.replace("ipfs://", "https://ipfs.hypha.coop/ipfs/");
 //   try {
 //     const gatewayResponse = await fetch(gatewayUrl);
 //     if (!gatewayResponse.ok) {
@@ -127,28 +127,44 @@ class DistributedPost extends HTMLElement {
       return;
     }
 
-    let htmlContent;
     try {
-      // if (postUrl.startsWith("ipfs://")) {
-      //   htmlContent = await loadPostFromIpfs(postUrl);
-      // }
-      if (postUrl.startsWith("ipns://") || postUrl.startsWith("hyper://")) {
-        // Directly load content for ipns and hyper URLs
-        const nativeResponse = await fetch(postUrl);
-        if (!nativeResponse.ok) {
-          throw new Error(`HTTP error! Status: ${nativeResponse.status}`);
-        }
-        htmlContent = await nativeResponse.text();
-      } else {
-        htmlContent = await loadPost(postUrl);
+      // Check if the URL directly points to a JSON-LD document
+      if (postUrl.endsWith(".jsonld")) {
+        const jsonLdData = await fetchJsonLd(postUrl);
+        this.renderPostContent(jsonLdData);
+        return;
       }
 
-      const jsonLdUrl = await parsePostHtml(htmlContent);
-      if (jsonLdUrl) {
-        const jsonLdData = await fetchJsonLd(jsonLdUrl);
-        this.renderPostContent(jsonLdData);
+      // Handle different URL schemes and HTML content
+      let content;
+      // if (postUrl.startsWith("ipfs://")) {
+      //   content = await loadPostFromIpfs(postUrl);
+      // }
+      if (
+        postUrl.startsWith("ipns://") ||
+        postUrl.startsWith("hyper://") ||
+        postUrl.startsWith("https://")
+      ) {
+        content = await loadPost(postUrl);
       } else {
-        this.renderErrorContent("JSON-LD URL not found in the post");
+        this.renderErrorContent("Unsupported URL scheme");
+        return;
+      }
+
+      // For HTML content, attempt to find and fetch JSON-LD link within the content
+      if (typeof content === "object" && !content.summary) {
+        // Assuming JSON-LD content has a "summary" field
+        this.renderPostContent(content);
+      } else if (typeof content === "string") {
+        const jsonLdUrl = await parsePostHtml(content);
+        if (jsonLdUrl) {
+          const jsonLdData = await fetchJsonLd(jsonLdUrl);
+          this.renderPostContent(jsonLdData);
+        } else {
+          this.renderErrorContent("JSON-LD URL not found in the post");
+        }
+      } else {
+        this.renderErrorContent("Invalid content type");
       }
     } catch (error) {
       this.renderErrorContent(error.message);
@@ -168,7 +184,6 @@ class DistributedPost extends HTMLElement {
       this.appendChild(actorInfo);
     }
 
-    this.appendField("Summary", jsonLdData.summary);
     this.appendField("Published", jsonLdData.published);
     this.appendField("Author", jsonLdData.attributedTo);
     this.appendField("Content", jsonLdData.content);
@@ -239,11 +254,8 @@ class ActorInfo extends HTMLElement {
         img.src = actorInfo.icon[0].url;
         img.width = 69;
         img.alt = actorInfo.name;
-        const pSummary = document.createElement("p");
-        pSummary.textContent = actorInfo.summary;
         this.appendChild(pName);
         this.appendChild(img);
-        this.appendChild(pSummary);
       }
     } catch (error) {
       const errorElement = renderError(error.message);
