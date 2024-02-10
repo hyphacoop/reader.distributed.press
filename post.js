@@ -173,9 +173,7 @@ class DistributedPost extends HTMLElement {
 
   renderPostContent(jsonLdData) {
     // Clear existing content
-    while (this.firstChild) {
-      this.removeChild(this.firstChild);
-    }
+    this.innerHTML = "";
 
     // Create elements for each field
     if (jsonLdData.attributedTo) {
@@ -213,9 +211,7 @@ class DistributedPost extends HTMLElement {
 
   renderErrorContent(errorMessage) {
     // Clear existing content
-    while (this.firstChild) {
-      this.removeChild(this.firstChild);
-    }
+    this.innerHTML = "";
 
     const errorElement = document.createElement("p");
     errorElement.className = "error";
@@ -245,9 +241,8 @@ class ActorInfo extends HTMLElement {
       if (actorInfo) {
         // Render the actor's avatar and name
         // Clear existing content
-        while (this.firstChild) {
-          this.removeChild(this.firstChild);
-        }
+        this.innerHTML = "";
+
         const pName = document.createElement("p");
         pName.textContent = actorInfo.name;
         const img = document.createElement("img");
