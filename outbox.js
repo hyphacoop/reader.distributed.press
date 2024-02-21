@@ -13,8 +13,8 @@ class DistributedOutbox extends HTMLElement {
 
   connectedCallback() {
     // Use attributes or default values
-    this.numPosts = parseInt(this.getAttribute("num-posts")) || this.numPosts;
-    this.page = parseInt(this.getAttribute("page")) || this.page;
+    this.numPosts = parseInt(this.getAttribute("num-posts"), 10) || this.numPosts;
+    this.page = parseInt(this.getAttribute("page"), 10) || this.page;
     this.loadOutbox(this.getAttribute("url"));
     this.paginationControls();
   }
