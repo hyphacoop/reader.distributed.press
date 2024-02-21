@@ -184,17 +184,20 @@ class DistributedPost extends HTMLElement {
 
     this.appendField("Published", jsonLdData.published);
     this.appendField("Author", jsonLdData.attributedTo);
-    this.appendField("Content", jsonLdData.content);
 
+    // Handle sensitive content
     if (jsonLdData.sensitive) {
       const details = document.createElement("details");
       const summary = document.createElement("summary");
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
-      content.textContent = jsonLdData.sensitive;
+      content.textContent = jsonLdData.content;
       details.appendChild(content);
       this.appendChild(details);
+    } else {
+      // If not sensitive, display content as usual
+      this.appendField("Content", jsonLdData.content);
     }
   }
 
