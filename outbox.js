@@ -76,8 +76,8 @@ class DistributedOutbox extends HTMLElement {
 
   renderItem(item) {
     const activityElement = document.createElement("distributed-activity");
-    activityElement.setAttribute("type", item.type);
-    activityElement.setAttribute("data", JSON.stringify(item));
+    activityElement.type = item.type;
+    activityElement.data = item;
     this.appendChild(activityElement);
   }
 
@@ -140,8 +140,8 @@ class DistributedActivity extends HTMLElement {
   }
 
   connectedCallback() {
-    this.activityType = this.getAttribute("type");
-    this.activityData = JSON.parse(this.getAttribute("data"));
+    this.activityType = this.type;
+    this.activityData = this.data;
     this.renderActivity();
   }
 
