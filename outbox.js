@@ -16,6 +16,7 @@ class DistributedOutbox extends HTMLElement {
     this.numPosts = parseInt(this.getAttribute("num-posts")) || this.numPosts;
     this.page = parseInt(this.getAttribute("page")) || this.page;
     this.loadOutbox(this.getAttribute("url"));
+    this.paginationControls();
   }
 
   async loadOutbox(outboxUrl) {
@@ -72,6 +73,30 @@ class DistributedOutbox extends HTMLElement {
     this.appendChild(activityElement);
   }
 
+  paginationControls() {
+    // Attach event listeners for pagination
+    const prevButton = document.getElementById("prevPage");
+    const nextButton = document.getElementById("nextPage");
+    if (prevButton) {
+      prevButton.addEventListener("click", () => this.prevPage());
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", () => this.nextPage());
+    }
+  }
+
+  nextPage() {
+    const currentPage = this.page;
+    if (currentPage < this.totalPages) {
+      this.setAttribute("page", currentPage + 1);
+    }
+  }
+
+  prevPage() {
+    const currentPage = this.page;
+    this.setAttribute("page", Math.max(1, currentPage - 1));
+  }
+
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "url") {
       this.clearContent();
@@ -84,10 +109,10 @@ class DistributedOutbox extends HTMLElement {
       this.loadOutbox(this.getAttribute("url"));
     }
   }
+
   clearContent() {
     // Clear existing content
     this.innerHTML = "";
-
     this.renderedItems.clear();
   }
 }
@@ -184,22 +209,3 @@ class DistributedActivity extends HTMLElement {
 
 // Register the new element with the browser
 customElements.define("distributed-activity", DistributedActivity);
-
-// Functions to navigate to the next or previous page
-document.addEventListener("DOMContentLoaded", () => {
-  const outbox = document.querySelector("distributed-outbox");
-  window.nextPage = () => {
-    const currentPage = parseInt(outbox.getAttribute("page"), 10) || 1;
-    // Access the totalPages property
-    const totalPages = outbox.totalPages;
-    if (currentPage < totalPages) {
-      // Ensure the page number doesn't go below 1
-      outbox.setAttribute("page", currentPage + 1);
-    }
-  };
-  window.prevPage = () => {
-    const currentPage = parseInt(outbox.getAttribute("page"), 10) || 1;
-    // Ensure the page number doesn't go below 1
-    outbox.setAttribute("page", Math.max(1, currentPage - 1));
-  };
-});
