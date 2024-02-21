@@ -5,8 +5,21 @@
   <!-- https://staticpub.mauve.moe/helloworld.html -->
   <!-- hyper://staticpub.mauve.moe/helloworld.html -->
   <!-- ipfs://bafybeifslnipwp5uanmhkckokwuse7h5gfrrjzqq4jg5oxewxbzrdcdawu -->
-  <distributed-post url="ipns://staticpub.mauve.moe/helloworld.html">
-  </distributed-post>
+  <distributed-post id="distributedPost"></distributed-post>
 </div>
 
 <script type="module" src="./post.js"></script>
+<!-- Dynamically set post URL from query string parameter -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+    const postUrl = params.get("url");
+
+    if (postUrl) {
+      const postElement = document.getElementById("distributedPost");
+      postElement.setAttribute("url", postUrl);
+    } else {
+      console.error("URL parameter is missing");
+    }
+  });
+</script>
