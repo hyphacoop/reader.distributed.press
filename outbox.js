@@ -1,7 +1,7 @@
 class DistributedOutbox extends HTMLElement {
   constructor() {
     super();
-    this.renderedItems = new Set(); // Tracks rendered items
+    this.renderedItems = new Map(); // Tracks rendered items by ID
     this.numPosts = 1; // Default value
     this.page = 1; // Default value
     this.totalPages = 0; // Keep track of total pages
@@ -22,12 +22,20 @@ class DistributedOutbox extends HTMLElement {
   async loadOutbox(outboxUrl) {
     this.clearContent();
     for await (const item of this.fetchOutboxItems(outboxUrl)) {
-      // Check if the item hasn't been rendered
-      if (!this.renderedItems.has(item.object)) {
-        this.renderItem(item);
-        // Mark as rendered
-        this.renderedItems.add(item.object);
+      const itemKey = item.object;
+      if (itemKey === undefined) {
+        console.error("Item key (object property) is undefined, item:", item);
+        continue; // Skip this item
       }
+      if (!this.renderedItems.has(itemKey)) {
+        this.renderItem(item);
+        // Mark as rendered by adding to the Map
+        this.renderedItems.set(itemKey, item);
+        // console.log(`Rendered item with key: ${itemKey}`);
+      }
+      // else {
+      //   console.log(`Duplicate item with key: ${itemKey} skipped`);
+      // }
     }
   }
 
