@@ -13,7 +13,8 @@ class DistributedOutbox extends HTMLElement {
 
   connectedCallback() {
     // Use attributes or default values
-    this.numPosts = parseInt(this.getAttribute("num-posts"), 10) || this.numPosts;
+    this.numPosts =
+      parseInt(this.getAttribute("num-posts"), 10) || this.numPosts;
     this.page = parseInt(this.getAttribute("page"), 10) || this.page;
     this.loadOutbox(this.getAttribute("url"));
   }
@@ -120,16 +121,41 @@ class DistributedActivity extends HTMLElement {
     super();
     this.activityType = "";
     this.activityData = {};
+    this.activityUrl = null;
   }
 
   static get observedAttributes() {
-    return ["type", "data"];
+    return ["type", "data", "url"];
   }
 
-  connectedCallback() {
-    this.activityType = this.type;
-    this.activityData = this.data;
-    this.renderActivity();
+  async connectedCallback() {
+    // Check if the component already has type and data set as properties
+    if (this.type && this.data) {
+      this.activityType = this.type;
+      this.activityData = this.data;
+      this.renderActivity();
+    }
+    // Load from URL if type and data are not set
+    else if (this.activityUrl) {
+      await this.loadDataFromUrl(this.activityUrl);
+    } else {
+      console.error("Activity data is not provided and no URL is specified.");
+    }
+  }
+
+  async loadDataFromUrl(activityUrl) {
+    try {
+      const response = await fetch(activityUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const activityData = await response.json();
+      this.type = activityData.type;
+      this.data = activityData;
+      this.connectedCallback();
+    } catch (error) {
+      console.error("Error loading activity data from URL:", error);
+    }
   }
 
   async fetchAndDisplayPost(postUrl) {
@@ -194,10 +220,22 @@ class DistributedActivity extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if ((name === "type" || name === "data") && newValue !== oldValue) {
-      this.activityType = this.getAttribute("type");
-      this.activityData = JSON.parse(this.getAttribute("data"));
-      this.renderActivity();
+    if (newValue !== oldValue) {
+      if (name === "type") {
+        this.activityType = newValue;
+        this.renderActivity();
+      } else if (name === "data") {
+        this.activityData = JSON.parse(newValue);
+        this.renderActivity();
+      } else if (name === "url") {
+        this.loadDataFromUrl(newValue)
+          .then(() => {
+            this.renderActivity();
+          })
+          .catch((error) => {
+            console.error("Error loading activity data from URL:", error);
+          });
+      }
     }
   }
 }
