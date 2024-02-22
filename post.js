@@ -192,6 +192,7 @@ class DistributedPost extends HTMLElement {
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
+      // TODO: Sanitize jsonLdData.content to remove or escape any harmful HTML content before displaying
       content.textContent = jsonLdData.content;
       details.appendChild(content);
       this.appendChild(details);
