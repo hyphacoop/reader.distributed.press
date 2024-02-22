@@ -16,7 +16,6 @@ class DistributedOutbox extends HTMLElement {
     this.numPosts = parseInt(this.getAttribute("num-posts"), 10) || this.numPosts;
     this.page = parseInt(this.getAttribute("page"), 10) || this.page;
     this.loadOutbox(this.getAttribute("url"));
-    this.paginationControls();
   }
 
   async loadOutbox(outboxUrl) {
@@ -79,18 +78,6 @@ class DistributedOutbox extends HTMLElement {
     activityElement.type = item.type;
     activityElement.data = item;
     this.appendChild(activityElement);
-  }
-
-  paginationControls() {
-    // Attach event listeners for pagination
-    const prevButton = document.getElementById("prevPage");
-    const nextButton = document.getElementById("nextPage");
-    if (prevButton) {
-      prevButton.addEventListener("click", () => this.prevPage());
-    }
-    if (nextButton) {
-      nextButton.addEventListener("click", () => this.nextPage());
-    }
   }
 
   nextPage() {

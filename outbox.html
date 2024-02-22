@@ -14,3 +14,15 @@
 </div>
 <script type="module" src="./outbox.js"></script>
 <script type="module" src="./post.js"></script>
+<script>
+  const outboxElement = document.querySelector("distributed-outbox");
+  const prevButton = document.getElementById("prevPage");
+  const nextButton = document.getElementById("nextPage");
+
+  if (prevButton) {
+    prevButton.addEventListener("click", () => outboxElement.prevPage());
+  }
+  if (nextButton) {
+    nextButton.addEventListener("click", () => outboxElement.nextPage());
+  }
+</script>
