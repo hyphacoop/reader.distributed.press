@@ -11,15 +11,13 @@
 <script type="module" src="./post.js"></script>
 <!-- Dynamically set post URL from query string parameter -->
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const params = new URLSearchParams(window.location.search);
-    const postUrl = params.get("url");
+  const params = new URLSearchParams(window.location.search);
+  const postUrl = params.get("url");
 
-    if (postUrl) {
-      const postElement = document.getElementById("distributedPost");
-      postElement.setAttribute("url", postUrl);
-    } else {
-      console.error("URL parameter is missing");
-    }
-  });
+  if (postUrl) {
+    const postElement = document.getElementById("distributedPost");
+    postElement.setAttribute("url", postUrl);
+  } else {
+    console.error("URL parameter is missing");
+  }
 </script>
