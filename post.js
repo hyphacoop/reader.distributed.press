@@ -175,15 +175,27 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = "";
 
-    // Create elements for each field
-    if (jsonLdData.attributedTo) {
+    // Determine the source of 'attributedTo' based on the structure of jsonLdData
+    let attributedToSource = jsonLdData.attributedTo;
+    if ("object" in jsonLdData && "attributedTo" in jsonLdData.object) {
+      attributedToSource = jsonLdData.object.attributedTo;
+    }
+
+    // Create elements for each field, using the determined source for 'attributedTo'
+    if (attributedToSource) {
       const actorInfo = document.createElement("actor-info");
-      actorInfo.setAttribute("url", jsonLdData.attributedTo);
+      actorInfo.setAttribute("url", attributedToSource);
       this.appendChild(actorInfo);
     }
 
     this.appendField("Published", jsonLdData.published);
-    this.appendField("Author", jsonLdData.attributedTo);
+    this.appendField("Author", attributedToSource);
+
+    // Determine content source based on structure of jsonLdData
+    let contentSource = jsonLdData.content;
+    if ("object" in jsonLdData && "content" in jsonLdData.object) {
+      contentSource = jsonLdData.object.content;
+    }
 
     // Handle sensitive content
     if (jsonLdData.sensitive) {
@@ -192,13 +204,13 @@ class DistributedPost extends HTMLElement {
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
-      // TODO: Sanitize jsonLdData.content to remove or escape any harmful HTML content before displaying
-      content.textContent = jsonLdData.content;
+      // TODO: Sanitize contentSource to remove or escape any harmful HTML content before displaying
+      content.textContent = contentSource;
       details.appendChild(content);
       this.appendChild(details);
     } else {
       // If not sensitive, display content as usual
-      this.appendField("Content", jsonLdData.content);
+      this.appendField("Content", contentSource);
     }
   }
 
@@ -243,18 +255,34 @@ class ActorInfo extends HTMLElement {
     try {
       const actorInfo = await fetchActorInfo(url);
       if (actorInfo) {
-        // Render the actor's avatar and name
         // Clear existing content
         this.innerHTML = "";
 
-        const pName = document.createElement("p");
-        pName.textContent = actorInfo.name;
-        const img = document.createElement("img");
-        img.src = actorInfo.icon[0].url;
-        img.width = 69;
-        img.alt = actorInfo.name;
-        this.appendChild(pName);
-        this.appendChild(img);
+        if (actorInfo.name) {
+          const pName = document.createElement("p");
+          pName.textContent = actorInfo.name;
+          this.appendChild(pName);
+        }
+
+        // Handle both single icon object and array of icons
+        let iconUrl = null;
+        if (actorInfo.icon) {
+          if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
+            // Assume first icon if array
+            iconUrl = actorInfo.icon[0].url;
+          } else if (actorInfo.icon.url) {
+            // Directly use the URL if object
+            iconUrl = actorInfo.icon.url;
+          }
+
+          if (iconUrl) {
+            const img = document.createElement("img");
+            img.src = iconUrl;
+            img.width = 69;
+            img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
+            this.appendChild(img);
+          }
+        }
       }
     } catch (error) {
       const errorElement = renderError(error.message);

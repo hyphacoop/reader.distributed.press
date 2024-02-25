@@ -2,7 +2,7 @@ class DistributedOutbox extends HTMLElement {
   constructor() {
     super();
     this.renderedItems = new Map(); // Tracks rendered items by ID
-    this.numPosts = 32; // Default value
+    this.numPosts = 1; // Default value
     this.page = 1; // Default value
     this.totalPages = 0; // Keep track of total pages
   }
@@ -22,20 +22,20 @@ class DistributedOutbox extends HTMLElement {
   async loadOutbox(outboxUrl) {
     this.clearContent();
     for await (const item of this.fetchOutboxItems(outboxUrl)) {
-      const itemKey = item.object;
-      if (itemKey === undefined) {
-        console.error("Item key (object property) is undefined, item:", item);
-        continue; // Skip this item
-      }
-      if (!this.renderedItems.has(itemKey)) {
-        this.renderItem(item);
-        // Mark as rendered by adding to the Map
-        this.renderedItems.set(itemKey, item);
-        // console.log(`Rendered item with key: ${itemKey}`);
-      }
-      // else {
-      //   console.log(`Duplicate item with key: ${itemKey} skipped`);
-      // }
+      this.processItem(item);
+    }
+  }
+  
+
+  processItem(item) {
+    const itemKey = item.id || item.object;
+    if (!itemKey) {
+      console.error("Item key is undefined, item:", item);
+      return;
+    }
+    if (!this.renderedItems.has(itemKey)) {
+      this.renderItem(item);
+      this.renderedItems.set(itemKey, true);
     }
   }
 
@@ -44,35 +44,44 @@ class DistributedOutbox extends HTMLElement {
       console.error("No outbox URL provided");
       return;
     }
-
+  
     try {
       const response = await fetch(outboxUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const outboxData = await response.json();
-
-      this.totalPages = Math.ceil(
-        outboxData.orderedItems.length / this.numPosts
-      );
-      // Prevent page number from going beyond total pages
+      const outbox = await response.json();
+  
+      // Adjust for both direct items and items loaded via URLs
+      const items = [];
+      for (const itemOrUrl of outbox.orderedItems) {
+        if (typeof itemOrUrl === 'string') { // URL to an activity
+          const itemResponse = await fetch(itemOrUrl);
+          if (itemResponse.ok) {
+            const item = await itemResponse.json();
+            items.push(item);
+          }
+        } else {
+          items.push(itemOrUrl); // Directly included activity
+        }
+      }
+  
+      this.totalPages = Math.ceil(items.length / this.numPosts);
       this.page = Math.min(this.page, this.totalPages);
-
-      // Simulate pagination by slicing the items array
+  
+      // Calculate the range of items to be loaded based on the current page and numPosts
       const startIndex = (this.page - 1) * this.numPosts;
       const endIndex = startIndex + this.numPosts;
-      const paginatedItems = outboxData.orderedItems.slice(
-        startIndex,
-        endIndex
-      );
-
-      for (const item of paginatedItems) {
+      const itemsToLoad = items.slice(startIndex, endIndex);
+  
+      for (const item of itemsToLoad) {
         yield item;
       }
     } catch (error) {
       console.error("Error fetching outbox:", error);
     }
   }
+  
 
   renderItem(item) {
     const activityElement = document.createElement("distributed-activity");
@@ -158,27 +167,42 @@ class DistributedActivity extends HTMLElement {
     }
   }
 
-  async fetchAndDisplayPost(postUrl) {
+  async fetchAndDisplayPost() {
+    let postUrl;
+    // Determine the source of the post (direct activity or URL pointing to the activity)
+    const isDirectPost =
+      typeof this.activityData.object === "string" ||
+      this.activityData.object instanceof String;
+
+    if (isDirectPost) {
+      postUrl = this.activityData.object;
+    } else if (this.activityData.object && this.activityData.object.id) {
+      postUrl = this.activityData.id;
+    } else {
+      postUrl = this.activityData.object;
+    }
+
     try {
       const response = await fetch(postUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       const postData = await response.json();
-      this.displayPostContent(postData.content);
+      // Determine how to extract content based on the post source
+      const content = isDirectPost ? postData.content : postData.object.content;
+      this.displayPostContent(content, postUrl);
     } catch (error) {
       console.error("Error fetching post content:", error);
     }
   }
 
-  displayPostContent(content) {
+  displayPostContent(content, url) {
     // Clear existing content
     this.innerHTML = "";
 
-    const postUrl = this.activityData.object;
     // Create and append the distributed-post component
     const distributedPostElement = document.createElement("distributed-post");
-    distributedPostElement.setAttribute("url", postUrl);
+    distributedPostElement.setAttribute("url", url);
     this.appendChild(distributedPostElement);
   }
 
