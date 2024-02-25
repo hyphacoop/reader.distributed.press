@@ -1,3 +1,5 @@
+import DOMPurify from "./dependencies/dompurify/purify.js";
+
 const ACCEPT_HEADER =
   "application/activity+json, application/ld+json, application/json, text/html";
 
@@ -204,23 +206,35 @@ class DistributedPost extends HTMLElement {
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
-      // TODO: Sanitize contentSource to remove or escape any harmful HTML content before displaying
-      content.textContent = contentSource;
+
+      // Sanitize contentSource before displaying
+      const sanitizedContent = DOMPurify.sanitize(contentSource);
+      content.innerHTML = sanitizedContent;
+
       details.appendChild(content);
       this.appendChild(details);
     } else {
-      // If not sensitive, display content as usual
-      this.appendField("Content", contentSource);
+      // If not sensitive, display content as usual but sanitize first
+      this.appendField("Content", DOMPurify.sanitize(contentSource), true);
     }
   }
 
-  appendField(label, value) {
+  // appendField to optionally allow HTML content
+  appendField(label, value, isHTML = false) {
     if (value) {
       const p = document.createElement("p");
       const strong = document.createElement("strong");
       strong.textContent = `${label}:`;
       p.appendChild(strong);
-      p.appendChild(document.createTextNode(` ${value}`));
+      if (isHTML) {
+        // If the content is HTML, set innerHTML directly
+        const span = document.createElement("span");
+        span.innerHTML = value;
+        p.appendChild(span);
+      } else {
+        // If not, treat it as text
+        p.appendChild(document.createTextNode(` ${value}`));
+      }
       this.appendChild(p);
     }
   }
