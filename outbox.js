@@ -230,7 +230,9 @@ class DistributedActivity extends HTMLElement {
   }
 
   displayFollowActivity() {
-    const message = `New follow request from ${this.activityData.actor}`;
+    const from = this.activityData.actor;
+    const to = this.activityData.object;
+    const message = `New follow request from ${from} to ${to}`;
     const messageElement = document.createElement("p");
     messageElement.textContent = message;
     this.appendChild(messageElement);
