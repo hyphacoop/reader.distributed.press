@@ -94,6 +94,60 @@ async function fetchJsonLd(jsonLdUrl) {
 //   }
 // }
 
+// Function to load content from IPNS with fallback to the IPNS HTTP gateway
+async function loadPostFromIpns(ipnsUrl) {
+  try {
+    const nativeResponse = await fetch(ipnsUrl);
+    if (nativeResponse.ok) {
+      return await nativeResponse.text();
+    }
+  } catch (error) {
+    console.log("Native IPNS loading failed, trying HTTP gateway:", error);
+  }
+
+  // Fallback to loading content via an HTTP IPNS gateway
+  const gatewayUrl = ipnsUrl.replace(
+    "ipns://",
+    "https://ipfs.hypha.coop/ipns/"
+  );
+  try {
+    const gatewayResponse = await fetch(gatewayUrl);
+    if (!gatewayResponse.ok) {
+      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
+    }
+    return await gatewayResponse.text();
+  } catch (error) {
+    console.error("Error fetching IPNS content via HTTP gateway:", error);
+  }
+}
+
+// Function to load content from Hyper with fallback to the Hyper HTTP gateway
+async function loadPostFromHyper(hyperUrl) {
+  try {
+    const nativeResponse = await fetch(hyperUrl);
+    if (nativeResponse.ok) {
+      return await nativeResponse.text();
+    }
+  } catch (error) {
+    console.log("Native Hyper loading failed, trying HTTP gateway:", error);
+  }
+
+  // Fallback to loading content via an HTTP Hyper gateway
+  const gatewayUrl = hyperUrl.replace(
+    "hyper://",
+    "https://hyper.hypha.coop/hyper/"
+  );
+  try {
+    const gatewayResponse = await fetch(gatewayUrl);
+    if (!gatewayResponse.ok) {
+      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
+    }
+    return await gatewayResponse.text();
+  } catch (error) {
+    console.error("Error fetching Hyper content via HTTP gateway:", error);
+  }
+}
+
 async function fetchActorInfo(actorUrl) {
   try {
     const response = await fetch(actorUrl);
@@ -142,11 +196,12 @@ class DistributedPost extends HTMLElement {
       // if (postUrl.startsWith("ipfs://")) {
       //   content = await loadPostFromIpfs(postUrl);
       // }
-      if (
-        postUrl.startsWith("ipns://") ||
-        postUrl.startsWith("hyper://") ||
-        postUrl.startsWith("https://")
-      ) {
+      // Attempt to load content using native URLs or HTTP gateways based on the scheme
+      if (postUrl.startsWith("ipns://")) {
+        content = await loadPostFromIpns(postUrl);
+      } else if (postUrl.startsWith("hyper://")) {
+        content = await loadPostFromHyper(postUrl);
+      } else if (postUrl.startsWith("https://")) {
         content = await loadPost(postUrl);
       } else {
         this.renderErrorContent("Unsupported URL scheme");

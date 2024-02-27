@@ -25,7 +25,6 @@ class DistributedOutbox extends HTMLElement {
       this.processItem(item);
     }
   }
-  
 
   processItem(item) {
     const itemKey = item.id || item.object;
@@ -44,18 +43,36 @@ class DistributedOutbox extends HTMLElement {
       console.error("No outbox URL provided");
       return;
     }
-  
+
     try {
-      const response = await fetch(outboxUrl);
+      let response;
+      // Check the scheme and adjust the URL for unsupported schemes before fetching
+      if (outboxUrl.startsWith("hyper://")) {
+        const gatewayUrl = outboxUrl.replace(
+          "hyper://",
+          "https://hyper.hypha.coop/hyper/"
+        );
+        response = await fetch(gatewayUrl);
+      } else if (outboxUrl.startsWith("ipns://")) {
+        const gatewayUrl = outboxUrl.replace(
+          "ipns://",
+          "https://ipfs.hypha.coop/ipns/"
+        );
+        response = await fetch(gatewayUrl);
+      } else {
+        response = await fetch(outboxUrl);
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       const outbox = await response.json();
-  
+
       // Adjust for both direct items and items loaded via URLs
       const items = [];
       for (const itemOrUrl of outbox.orderedItems) {
-        if (typeof itemOrUrl === 'string') { // URL to an activity
+        if (typeof itemOrUrl === "string") {
+          // URL to an activity
           const itemResponse = await fetch(itemOrUrl);
           if (itemResponse.ok) {
             const item = await itemResponse.json();
@@ -65,15 +82,15 @@ class DistributedOutbox extends HTMLElement {
           items.push(itemOrUrl); // Directly included activity
         }
       }
-  
+
       this.totalPages = Math.ceil(items.length / this.numPosts);
       this.page = Math.min(this.page, this.totalPages);
-  
+
       // Calculate the range of items to be loaded based on the current page and numPosts
       const startIndex = (this.page - 1) * this.numPosts;
       const endIndex = startIndex + this.numPosts;
       const itemsToLoad = items.slice(startIndex, endIndex);
-  
+
       for (const item of itemsToLoad) {
         yield item;
       }
@@ -81,7 +98,6 @@ class DistributedOutbox extends HTMLElement {
       console.error("Error fetching outbox:", error);
     }
   }
-  
 
   renderItem(item) {
     const activityElement = document.createElement("distributed-activity");
