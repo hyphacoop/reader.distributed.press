@@ -1,3 +1,5 @@
+import DOMPurify from "./dependencies/dompurify/purify.js";
+
 const ACCEPT_HEADER =
   "application/activity+json, application/ld+json, application/json, text/html";
 
@@ -92,6 +94,60 @@ async function fetchJsonLd(jsonLdUrl) {
 //   }
 // }
 
+// Function to load content from IPNS with fallback to the IPNS HTTP gateway
+async function loadPostFromIpns(ipnsUrl) {
+  try {
+    const nativeResponse = await fetch(ipnsUrl);
+    if (nativeResponse.ok) {
+      return await nativeResponse.text();
+    }
+  } catch (error) {
+    console.log("Native IPNS loading failed, trying HTTP gateway:", error);
+  }
+
+  // Fallback to loading content via an HTTP IPNS gateway
+  const gatewayUrl = ipnsUrl.replace(
+    "ipns://",
+    "https://ipfs.hypha.coop/ipns/"
+  );
+  try {
+    const gatewayResponse = await fetch(gatewayUrl);
+    if (!gatewayResponse.ok) {
+      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
+    }
+    return await gatewayResponse.text();
+  } catch (error) {
+    console.error("Error fetching IPNS content via HTTP gateway:", error);
+  }
+}
+
+// Function to load content from Hyper with fallback to the Hyper HTTP gateway
+async function loadPostFromHyper(hyperUrl) {
+  try {
+    const nativeResponse = await fetch(hyperUrl);
+    if (nativeResponse.ok) {
+      return await nativeResponse.text();
+    }
+  } catch (error) {
+    console.log("Native Hyper loading failed, trying HTTP gateway:", error);
+  }
+
+  // Fallback to loading content via an HTTP Hyper gateway
+  const gatewayUrl = hyperUrl.replace(
+    "hyper://",
+    "https://hyper.hypha.coop/hyper/"
+  );
+  try {
+    const gatewayResponse = await fetch(gatewayUrl);
+    if (!gatewayResponse.ok) {
+      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
+    }
+    return await gatewayResponse.text();
+  } catch (error) {
+    console.error("Error fetching Hyper content via HTTP gateway:", error);
+  }
+}
+
 async function fetchActorInfo(actorUrl) {
   try {
     const response = await fetch(actorUrl);
@@ -140,11 +196,12 @@ class DistributedPost extends HTMLElement {
       // if (postUrl.startsWith("ipfs://")) {
       //   content = await loadPostFromIpfs(postUrl);
       // }
-      if (
-        postUrl.startsWith("ipns://") ||
-        postUrl.startsWith("hyper://") ||
-        postUrl.startsWith("https://")
-      ) {
+      // Attempt to load content using native URLs or HTTP gateways based on the scheme
+      if (postUrl.startsWith("ipns://")) {
+        content = await loadPostFromIpns(postUrl);
+      } else if (postUrl.startsWith("hyper://")) {
+        content = await loadPostFromHyper(postUrl);
+      } else if (postUrl.startsWith("https://")) {
         content = await loadPost(postUrl);
       } else {
         this.renderErrorContent("Unsupported URL scheme");
@@ -175,36 +232,64 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = "";
 
-    // Create elements for each field
-    if (jsonLdData.attributedTo) {
+    // Determine the source of 'attributedTo' based on the structure of jsonLdData
+    let attributedToSource = jsonLdData.attributedTo;
+    if ("object" in jsonLdData && "attributedTo" in jsonLdData.object) {
+      attributedToSource = jsonLdData.object.attributedTo;
+    }
+
+    // Create elements for each field, using the determined source for 'attributedTo'
+    if (attributedToSource) {
       const actorInfo = document.createElement("actor-info");
-      actorInfo.setAttribute("url", jsonLdData.attributedTo);
+      actorInfo.setAttribute("url", attributedToSource);
       this.appendChild(actorInfo);
     }
 
     this.appendField("Published", jsonLdData.published);
-    this.appendField("Author", jsonLdData.attributedTo);
-    this.appendField("Content", jsonLdData.content);
+    this.appendField("Author", attributedToSource);
 
+    // Determine content source based on structure of jsonLdData
+    let contentSource = jsonLdData.content;
+    if ("object" in jsonLdData && "content" in jsonLdData.object) {
+      contentSource = jsonLdData.object.content;
+    }
+
+    // Handle sensitive content
     if (jsonLdData.sensitive) {
       const details = document.createElement("details");
       const summary = document.createElement("summary");
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
-      content.textContent = jsonLdData.sensitive;
+
+      // Sanitize contentSource before displaying
+      const sanitizedContent = DOMPurify.sanitize(contentSource);
+      content.innerHTML = sanitizedContent;
+
       details.appendChild(content);
       this.appendChild(details);
+    } else {
+      // If not sensitive, display content as usual but sanitize first
+      this.appendField("Content", DOMPurify.sanitize(contentSource), true);
     }
   }
 
-  appendField(label, value) {
+  // appendField to optionally allow HTML content
+  appendField(label, value, isHTML = false) {
     if (value) {
       const p = document.createElement("p");
       const strong = document.createElement("strong");
       strong.textContent = `${label}:`;
       p.appendChild(strong);
-      p.appendChild(document.createTextNode(` ${value}`));
+      if (isHTML) {
+        // If the content is HTML, set innerHTML directly
+        const span = document.createElement("span");
+        span.innerHTML = value;
+        p.appendChild(span);
+      } else {
+        // If not, treat it as text
+        p.appendChild(document.createTextNode(` ${value}`));
+      }
       this.appendChild(p);
     }
   }
@@ -239,18 +324,34 @@ class ActorInfo extends HTMLElement {
     try {
       const actorInfo = await fetchActorInfo(url);
       if (actorInfo) {
-        // Render the actor's avatar and name
         // Clear existing content
         this.innerHTML = "";
 
-        const pName = document.createElement("p");
-        pName.textContent = actorInfo.name;
-        const img = document.createElement("img");
-        img.src = actorInfo.icon[0].url;
-        img.width = 69;
-        img.alt = actorInfo.name;
-        this.appendChild(pName);
-        this.appendChild(img);
+        if (actorInfo.name) {
+          const pName = document.createElement("p");
+          pName.textContent = actorInfo.name;
+          this.appendChild(pName);
+        }
+
+        // Handle both single icon object and array of icons
+        let iconUrl = null;
+        if (actorInfo.icon) {
+          if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
+            // Assume first icon if array
+            iconUrl = actorInfo.icon[0].url;
+          } else if (actorInfo.icon.url) {
+            // Directly use the URL if object
+            iconUrl = actorInfo.icon.url;
+          }
+
+          if (iconUrl) {
+            const img = document.createElement("img");
+            img.src = iconUrl;
+            img.width = 69;
+            img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
+            this.appendChild(img);
+          }
+        }
       }
     } catch (error) {
       const errorElement = renderError(error.message);
