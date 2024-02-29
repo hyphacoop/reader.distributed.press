@@ -4,6 +4,7 @@ Vars
 Any colors, sizings, etc should be set as vars and reused
 */
 
+@import url("agregore://theme/style.css");
 
 :root {
 	--rdp-font: "system-ui"
