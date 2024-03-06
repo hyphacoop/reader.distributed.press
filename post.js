@@ -160,6 +160,43 @@ async function fetchActorInfo(actorUrl) {
   }
 }
 
+function formatDate(dateString) {
+  const options = { year: "numeric", month: "short", day: "numeric" };
+  return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
+// Helper function to calculate elapsed time (e.g., 1h, 1d, 1w)
+function timeSince(dateString) {
+  const date = new Date(dateString);
+  const seconds = Math.floor((new Date() - date) / 1000);
+
+  let interval = seconds / 31536000; // 365 * 24 * 60 * 60
+  if (interval > 1) {
+    return formatDate(dateString); // Return formatted date if more than a year
+  }
+  interval = seconds / 2592000; // 30 * 24 * 60 * 60
+  if (interval > 1) {
+    return Math.floor(interval) + "mo";
+  }
+  interval = seconds / 604800; // 7 * 24 * 60 * 60
+  if (interval > 1) {
+    return Math.floor(interval) + "w";
+  }
+  interval = seconds / 86400; // 24 * 60 * 60
+  if (interval > 1) {
+    return Math.floor(interval) + "d";
+  }
+  interval = seconds / 3600; // 60 * 60
+  if (interval > 1) {
+    return Math.floor(interval) + "h";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + "m";
+  }
+  return Math.floor(seconds) + "s";
+}
+
 function renderError(message) {
   const errorElement = document.createElement("p");
   errorElement.classList.add("error");
@@ -232,6 +269,14 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = "";
 
+    // Create the container for the post
+    const postContainer = document.createElement("div");
+    postContainer.classList.add("distributed-post");
+
+    // Header for the post, which will contain actor info and published time
+    const postHeader = document.createElement("header");
+    postHeader.classList.add("distributed-post-header");
+
     // Determine the source of 'attributedTo' based on the structure of jsonLdData
     let attributedToSource = jsonLdData.attributedTo;
     if ("object" in jsonLdData && "attributedTo" in jsonLdData.object) {
@@ -242,17 +287,26 @@ class DistributedPost extends HTMLElement {
     if (attributedToSource) {
       const actorInfo = document.createElement("actor-info");
       actorInfo.setAttribute("url", attributedToSource);
-      this.appendChild(actorInfo);
+      postHeader.appendChild(actorInfo);
     }
 
-    this.appendField("Published", jsonLdData.published);
-    this.appendField("Author", attributedToSource);
+    // Published time element
+    const publishedTime = document.createElement("time");
+    publishedTime.classList.add("time-ago");
+    const elapsed = timeSince(jsonLdData.published);
+    publishedTime.textContent = elapsed;
+    postHeader.appendChild(publishedTime);
+
+    // Append the header to the post container
+    postContainer.appendChild(postHeader);
+
+    // Main content of the post
+    const postContent = document.createElement("div");
+    postContent.classList.add("post-content");
 
     // Determine content source based on structure of jsonLdData
-    let contentSource = jsonLdData.content;
-    if ("object" in jsonLdData && "content" in jsonLdData.object) {
-      contentSource = jsonLdData.object.content;
-    }
+    let contentSource =
+      jsonLdData.content || (jsonLdData.object && jsonLdData.object.content);
 
     // Handle sensitive content
     if (jsonLdData.sensitive) {
@@ -261,17 +315,31 @@ class DistributedPost extends HTMLElement {
       summary.textContent = "Sensitive Content (click to view)";
       details.appendChild(summary);
       const content = document.createElement("p");
-
-      // Sanitize contentSource before displaying
-      const sanitizedContent = DOMPurify.sanitize(contentSource);
-      content.innerHTML = sanitizedContent;
-
+      content.innerHTML = DOMPurify.sanitize(contentSource);
       details.appendChild(content);
-      this.appendChild(details);
+      postContent.appendChild(details);
     } else {
-      // If not sensitive, display content as usual but sanitize first
-      this.appendField("Content", DOMPurify.sanitize(contentSource), true);
+      const content = document.createElement("p");
+      content.innerHTML = DOMPurify.sanitize(contentSource);
+      postContent.appendChild(content);
     }
+
+    // Append the content to the post container
+    postContainer.appendChild(postContent);
+
+    // Footer of the post, which will contain the full published date and platform
+    const postFooter = document.createElement("footer");
+    postFooter.classList.add("post-footer");
+    const fullDate = document.createElement("div");
+    fullDate.classList.add("full-date");
+    fullDate.textContent = formatDate(jsonLdData.published) + " · reader web";
+    postFooter.appendChild(fullDate);
+
+    // Append the footer to the post container
+    postContainer.appendChild(postFooter);
+
+    // Append the whole post container to the custom element
+    this.appendChild(postContainer);
   }
 
   // appendField to optionally allow HTML content
@@ -301,6 +369,7 @@ class DistributedPost extends HTMLElement {
     const errorElement = document.createElement("p");
     errorElement.className = "error";
     errorElement.textContent = errorMessage;
+    errorElement.style.color = "red";
     this.appendChild(errorElement);
   }
 }
@@ -327,31 +396,47 @@ class ActorInfo extends HTMLElement {
         // Clear existing content
         this.innerHTML = "";
 
-        if (actorInfo.name) {
-          const pName = document.createElement("p");
-          pName.textContent = actorInfo.name;
-          this.appendChild(pName);
-        }
+        const author = document.createElement("div");
+        author.classList.add("distributed-post-author");
+
+        const authorDetails = document.createElement("div");
+        authorDetails.classList.add("actor-details");
 
         // Handle both single icon object and array of icons
         let iconUrl = null;
         if (actorInfo.icon) {
           if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
-            // Assume first icon if array
             iconUrl = actorInfo.icon[0].url;
           } else if (actorInfo.icon.url) {
-            // Directly use the URL if object
             iconUrl = actorInfo.icon.url;
           }
 
           if (iconUrl) {
             const img = document.createElement("img");
+            img.classList.add("actor-icon");
             img.src = iconUrl;
-            img.width = 69;
             img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
-            this.appendChild(img);
+            author.appendChild(img);
           }
         }
+
+        if (actorInfo.name) {
+          const pName = document.createElement("div");
+          pName.classList.add("actor-name");
+          pName.textContent = actorInfo.name;
+          authorDetails.appendChild(pName);
+        }
+
+        if (actorInfo.preferredUsername) {
+          const pUserName = document.createElement("div");
+          pUserName.classList.add("actor-username");
+          pUserName.textContent = `@${actorInfo.preferredUsername}`;
+          authorDetails.appendChild(pUserName);
+        }
+        // Append the authorDetails to the author div
+        author.appendChild(authorDetails);
+        // Append the author container to the actor-info component
+        this.appendChild(author);
       }
     } catch (error) {
       const errorElement = renderError(error.message);
