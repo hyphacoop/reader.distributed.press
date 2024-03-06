@@ -1,0 +1,9 @@
+/* Vars */
+:root {
+  --bg-color: #ffffff;
+}
+
+/* Main styles */
+html {
+  background: var(--bg-color);
+}

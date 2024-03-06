@@ -222,13 +222,37 @@ class DistributedActivity extends HTMLElement {
     this.appendChild(distributedPostElement);
   }
 
+  fetchAndUpdatePost(activityData) {
+    let postUrl;
+    // Determine the source of the post (direct activity or URL pointing to the activity)
+    const isDirectUpdate =
+      typeof activityData.object === "string" ||
+      activityData.object instanceof String;
+
+    if (isDirectUpdate) {
+      // If it's a direct update, use the URL from the 'object' property
+      postUrl = activityData.object;
+    } else if (activityData.object && activityData.object.id) {
+      // If the 'object' property contains an 'id', use it as the URL
+      postUrl = activityData.object.id;
+    } else {
+      // Otherwise, use the 'id' property of the activityData itself
+      postUrl = activityData.id;
+    }
+
+    this.fetchAndDisplayPost(postUrl);
+  }
+
   renderActivity() {
     // Clear existing content
     this.innerHTML = "";
 
     switch (this.activityType) {
       case "Create":
-        this.fetchAndDisplayPost(this.activityData.object);
+        this.fetchAndDisplayPost();
+        break;
+      case "Update":
+        this.fetchAndUpdatePost(this.activityData);
         break;
       case "Follow":
         this.displayFollowActivity();

@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<title>Distributed Press Reader</title>
-<link rel="stylesheet" href="./style.css" />
+<title>Reader Outbox</title>
+<style>
+  @import url("./outbox.css");
+  @import url("./post.css");
+</style>
 <div id="outbox-container">
-  <!-- https://staticpub.mauve.moe/outbox.jsonld -->
   <!-- hyper://staticpub.mauve.moe/outbox.jsonld -->
   <!-- ipns://staticpub.mauve.moe/outbox-ipns.jsonld -->
   <distributed-outbox
@@ -10,8 +12,8 @@
   ></distributed-outbox>
 </div>
 <div class="pagination-controls">
-  <button id="prevPage">Previous Page</button>
-  <button id="nextPage">Next Page</button>
+  <button id="prevPage">< Previous</button>
+  <button id="nextPage">Next ></button>
 </div>
 <script type="module" src="./outbox.js"></script>
 <script type="module" src="./post.js"></script>
