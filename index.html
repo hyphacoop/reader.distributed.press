@@ -1,19 +1,29 @@
 <!DOCTYPE html>
-<title>Distributed Press Reader</title>
+<title>Social Reader</title>
 <style>
-  @import url("./style.css");
+  @import url("./index.css");
+  @import url("./timeline.css");
+  @import url("./outbox.css");
+  @import url("./post.css");
 </style>
-<a href="./post.html">Post</a>
-<a href="./outbox.html">Outbox</a>
-<p>
-  Work in progress, check back later or
-  <a href="https://github.com/hyphacoop/reader.distributed.press"
-    >follow us on GitHub</a
-  >.
-</p>
-<script type="module">
-  import {ActivityPubDB} from "./db.js"
-  
-  window.db = await ActivityPubDB.load()
-</script>
-  
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h1>Social Reader</h1>
+      <nav>
+        <a href="https://github.com/hyphacoop/reader.distributed.press"
+          >GitHub</a
+        >
+        <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+          >Social Inbox</a
+        >
+        <a href="https://distributed.press">Distributed Press</a>
+      </nav>
+    </div>
+    <reader-timeline></reader-timeline>
+  </div>
+</body>
+<script type="module" src="./db.js"></script>
+<script type="module" src="./timeline.js"></script>
+<script type="module" src="./outbox.js"></script>
+<script type="module" src="./post.js"></script>
