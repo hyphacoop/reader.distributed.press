@@ -225,28 +225,10 @@ export class ActivityPubDB {
       } else {
         note = activity.object
       }
-
       if (note.type === TYPE_NOTE) {
-        // If it's an update, retain the original note ID, else use the activity's ID
-        if (activity.type === TYPE_UPDATE) {
-          // Attempt to retrieve the existing note first to maintain its ID
-          const existingNote = await this.getNote(note.id)
-          if (existingNote) {
-            // Update the existing note with the new content or fields
-            note = { ...existingNote, ...note }
-          } else {
-            console.warn(
-              'Update activity received for a non-existent note:',
-              note.id
-            )
-          }
-        } else {
-          // This is a create activity, use the activity's ID for the note ID
-          note.id = activity.id
-        }
-
-        console.log('Ingesting note:', note)
-        await this.ingestNote(note)
+        note.id = activity.id; // Use the Create activity's ID for the note ID
+        console.log("Ingesting note:", note);
+        await this.ingestNote(note);
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
