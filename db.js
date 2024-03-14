@@ -222,18 +222,25 @@ export class ActivityPubDB {
     }
   }
 
-  async ingestNote (note) {
+  async ingestNote(note) {
     // Convert needed fields to date
-    note.published = new Date(note.published)
+    note.published = new Date(note.published);
     // Add tag_names field
-    note.tag_names = (note.tags || []).map(({ name }) => name)
-    // Check if the note is already in the database to avoid duplicates
-    const existingNote = await this.db.get(NOTES_STORE, note.id)
-    if (!existingNote) {
-      await this.db.put(NOTES_STORE, note)
+    note.tag_names = (note.tags || []).map(({ name }) => name);
+    // Try to retrieve an existing note from the database
+    const existingNote = await this.db.get(NOTES_STORE, note.id);
+    // If there's an existing note and the incoming note is newer, update it
+    if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
+      console.log(`Updating note with newer version: ${note.id}`);
+      await this.db.put(NOTES_STORE, note);
+    } else if (!existingNote) {
+      // If no existing note, just add the new note
+      console.log(`Adding new note: ${note.id}`);
+      await this.db.put(NOTES_STORE, note);
     }
+    // If the existing note is newer, do not replace it
     // TODO: Loop through replies
-  }
+  }  
 
   async deleteNote (url) {
     // delete note using the url as the `id` from the notes store
