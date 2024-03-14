@@ -2,12 +2,24 @@
 <title>Social Reader</title>
 <style>
   @import url("./index.css");
+  @import url("./timeline.css");
+  @import url("./outbox.css");
+  @import url("./post.css");
 </style>
-<a href="./post.html">Post</a>
-<a href="./outbox.html">Outbox</a>
-<p>
-  Work in progress, check back later or
-  <a href="https://github.com/hyphacoop/reader.distributed.press"
-    >follow us on GitHub</a
-  >.
-</p>
+<div class="container">
+  <div class="sidebar">
+    <h1>Social Reader</h1>
+    <nav>
+      <a href="https://github.com/hyphacoop/reader.distributed.press">GitHub</a>
+      <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+        >Social Inbox</a
+      >
+      <a href="https://distributed.press">Distributed Press</a>
+    </nav>
+  </div>
+  <reader-timeline></reader-timeline>
+</div>
+<script type="module" src="./dbInstance.js"></script>
+<script type="module" src="./timeline.js"></script>
+<script type="module" src="./outbox.js"></script>
+<script type="module" src="./post.js"></script>

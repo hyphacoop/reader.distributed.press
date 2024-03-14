@@ -1,0 +1,29 @@
+/*
+Vars
+
+Any colors, sizings, etc should be set as vars and reused
+*/
+
+@import url("agregore://theme/style.css");
+
+:root {
+	--rdp-font: "system-ui"
+}
+
+/*
+Main styles
+
+These should set the default look and feel of the app.
+Stuff like font color/size,  backgrounds, button/paragraph styles.
+*/
+
+html {
+  font-family: var(--rdp-font);
+}
+
+
+/*
+Component styles
+*/
+
+// TODO
