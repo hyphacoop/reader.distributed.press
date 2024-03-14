@@ -308,8 +308,13 @@ class DistributedPost extends HTMLElement {
     let contentSource =
       jsonLdData.content || (jsonLdData.object && jsonLdData.object.content);
 
+    // Determine if the content is marked as sensitive in either the direct jsonLdData or within jsonLdData.object
+    let isSensitive =
+      jsonLdData.sensitive ||
+      (jsonLdData.object && jsonLdData.object.sensitive);
+
     // Handle sensitive content
-    if (jsonLdData.sensitive) {
+    if (isSensitive) {
       const details = document.createElement("details");
       const summary = document.createElement("summary");
       summary.textContent = "Sensitive Content (click to view)";
