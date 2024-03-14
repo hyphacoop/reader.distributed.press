@@ -13,6 +13,10 @@ html {
   font-family: var(--rdp-font);
 }
 
+img {
+  max-width: 100%;
+}
+
 /* Component styles */
 .distributed-post {
   background: var(--rdp-bg-color);
