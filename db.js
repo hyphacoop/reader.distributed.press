@@ -21,6 +21,7 @@ export const ACTOR_FIELD = "actor";
 export const PUBLISHED_SUFFIX = ", published";
 
 export const TYPE_CREATE = "Create";
+export const TYPE_UPDATE = "Update";
 export const TYPE_NOTE = "Note";
 export const TYPE_DELETE = "Delete";
 
@@ -217,24 +218,39 @@ export class ActivityPubDB {
     console.log("Ingesting activity:", activity);
     await this.db.put(ACTIVITIES_STORE, activity);
 
-    // Only ingest the note if the activity is not a 'Create' activity.
-    // The 'Create' activity already includes the note information.
-    if (activity.type !== TYPE_CREATE) {
+    if (activity.type !== TYPE_CREATE || activity.type !== TYPE_UPDATE) {
       let note;
       if (typeof activity.object === "string") {
         note = await this.#get(activity.object);
       } else {
         note = activity.object;
-        note.isPartOfCreateActivity = true;
-        console.log("Ingesting note:", note);
-        await this.ingestNote(note);
       }
 
       if (note.type === TYPE_NOTE) {
-        note.id = activity.id; // Use the Create activity's ID for the note ID
+        // If it's an update, retain the original note ID, else use the activity's ID
+        if (activity.type === TYPE_UPDATE) {
+          // Attempt to retrieve the existing note first to maintain its ID
+          const existingNote = await this.getNote(note.id);
+          if (existingNote) {
+            // Update the existing note with the new content or fields
+            note = { ...existingNote, ...note };
+          } else {
+            console.warn(
+              "Update activity received for a non-existent note:",
+              note.id
+            );
+          }
+        } else {
+          // This is a create activity, use the activity's ID for the note ID
+          note.id = activity.id;
+        }
+
         console.log("Ingesting note:", note);
         await this.ingestNote(note);
       }
+    } else if (activity.type === TYPE_DELETE) {
+      // Handle 'Delete' activity type
+      await this.deleteNote(activity.object);
     }
   }
 
