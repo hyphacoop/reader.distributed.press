@@ -3,10 +3,10 @@ import { db } from "./dbInstance.js";
 class ReaderTimeline extends HTMLElement {
   constructor() {
     super();
-    // Default outbox URLs to fetch and display in the timeline
-    this.outboxUrls = [
-      "ipns://staticpub.mauve.moe/outbox.jsonld",
-      "ipns://hypha.coop/outbox.jsonld",
+    this.actorUrls = [
+      "https://staticpub.mauve.moe/about.jsonld",
+      "https://hypha.coop/about.jsonld",
+      "https://prueba-cola-de-moderacion-2.sutty.nl/about.jsonld",
     ];
   }
 
@@ -15,27 +15,25 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline() {
-    // Clear existing content
-    this.innerHTML = "";
+    this.innerHTML = ""; // Clear existing content
 
-    for (const outboxUrl of this.outboxUrls) {
+    for (const actorUrl of this.actorUrls) {
       try {
-        console.log("Ingesting actor from outbox URL:", outboxUrl);
-        await db.ingestActor(outboxUrl);
+        console.log("Loading actor:", actorUrl);
+        const actorData = await db.ingestActor(actorUrl);
+        const notes = await db.searchNotes({ attributedTo: actorData });
 
-        const outboxElement = document.createElement("distributed-outbox");
-        outboxElement.setAttribute("url", outboxUrl);
-
-        this.appendChild(outboxElement);
+        notes.forEach((note) => {
+          console.log(note.id);
+          const activityElement = document.createElement("distributed-post");
+          activityElement.setAttribute("url", note.id);
+          this.appendChild(activityElement);
+        });
       } catch (error) {
-        console.error(
-          `Error ingesting actor from outbox URL ${outboxUrl}:`,
-          error
-        );
+        console.error(`Error loading actor ${actorUrl}:`, error);
       }
     }
   }
 }
 
-// Register the reader-timeline element
 customElements.define("reader-timeline", ReaderTimeline);

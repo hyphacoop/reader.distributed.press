@@ -116,62 +116,82 @@ export class ActivityPubDB {
     }
   }
 
+  async searchNotes(criteria) {
+    const tx = this.db.transaction(NOTES_STORE, "readonly");
+    const notes = [];
+    const index = criteria.attributedTo
+      ? tx.store.index("attributedTo")
+      : tx.store;
+
+    // Use async iteration to iterate over the store or index
+    for await (const cursor of index.iterate(criteria.attributedTo)) {
+      notes.push(cursor.value);
+    }
+
+    // Implement additional filtering logic if needed based on other criteria (like time ranges or tags)
+    // For example:
+    // notes.filter(note => note.published >= criteria.startDate && note.published <= criteria.endDate);
+    return notes.sort((a, b) => b.published - a.published); // Sort by published date in descending order
+  }
+
   async ingestActor(url) {
     console.log(`Starting ingestion for actor from URL: ${url}`);
     const actor = await this.getActor(url);
     console.log(`Actor received:`, actor);
 
-    try {
-      // If the actor object has an 'orderedItems' field, use that as the outbox
-      const outbox = actor.orderedItems
-        ? { orderedItems: actor.orderedItems }
-        : actor.outbox;
+    // If actor has an 'outbox', ingest it as a collection
+    if (actor.outbox) {
+      await this.ingestActivityCollection(actor.outbox, actor.id);
+    } else {
+      console.error(`No outbox found for actor at URL ${url}`);
+    }
 
-      // Check that the outbox URL or orderedItems exist
-      if (!outbox || (!outbox.orderedItems && !outbox.url)) {
-        throw new Error(`Actor's outbox is not defined: ${url}`);
-      }
+    // This is where we might add more features to our actor ingestion process.
+    // e.g., if (actor.followers) { ... }
+  }
 
-      // If the outbox is an object with orderedItems, process it directly
-      if (outbox.orderedItems) {
-        console.log("Outbox orderedItems:", outbox.orderedItems);
-        for (const itemUrl of outbox.orderedItems) {
-          const activity = await this.#get(itemUrl);
-          await this.ingestActivity(activity);
-        }
+  async ingestActivityCollection(collectionOrUrl, actorId) {
+    let collection;
+    console.log(
+      `Fetching collection for actor ID ${actorId}:`,
+      collectionOrUrl
+    );
+
+    if (typeof collectionOrUrl === "string") {
+      // If the collection is a URL, fetch it first
+      collection = await this.#get(collectionOrUrl);
+    } else {
+      // If the collection is an object, use it directly
+      collection = collectionOrUrl;
+    }
+
+    for await (const activity of this.iterateCollection(collection)) {
+      await this.ingestActivity(activity, actorId);
+    }
+  }
+
+  async *iterateCollection(collection) {
+    // TODO: handle pagination here, if collection contains a 'next' or 'first' link.
+    const items = collection.orderedItems || collection.items;
+
+    if (!items) {
+      console.error(`No items found in collection:`, collection);
+      return; // Exit if no items to iterate over
+    }
+
+    for (const itemOrUrl of items) {
+      let activity;
+      if (typeof itemOrUrl === "string") {
+        // Fetch the individual activity if the item is a URL
+        activity = await this.#get(itemOrUrl);
       } else {
-        // Otherwise, ingest the outbox by URL as originally intended
-        console.log("Outbox URL:", outbox.url);
-        await this.ingestActivityCollection(outbox.url, url);
+        // Use the item directly if it's an object
+        activity = itemOrUrl;
       }
-    } catch (error) {
-      console.error(`Error during outbox processing for URL ${url}:`, error);
-    }
-  }
 
-  async *iterateCollection(url) {
-    console.log("Iterating collection URL:", url); // Debug URL
-    const collection = await this.#get(url);
-    // TODO: handle paging and skiping
-    const items = collection.items || collection.orderedItems;
-
-    if (!items) throw new Error(`Unable to find items at ${url}`);
-    for await (const item of items) {
-      if (typeof item === "string") {
-        const data = await this.#get(item);
-        yield data;
-      } else yield item;
-    }
-  }
-
-  async ingestActivityCollection(url, verifyAttributed = "") {
-    for await (const activity of this.iterateCollection(url)) {
-      if (verifyAttributed && activity.actor !== verifyAttributed) {
-        throw new Error(
-          `Collection contained activity not attributed to ${verifyAttributed} at ${url} in activity ${activity.id}`
-        );
+      if (activity) {
+        yield activity;
       }
-      await this.ingestActivity(activity);
     }
   }
 
@@ -190,18 +210,31 @@ export class ActivityPubDB {
       }
     }
 
+    // Convert the published date to a Date object
     activity.published = new Date(activity.published);
+
+    // Store the activity in the ACTIVITIES_STORE
     console.log("Ingesting activity:", activity);
     await this.db.put(ACTIVITIES_STORE, activity);
 
-    if (activity.type === TYPE_CREATE) {
-      const object = await this.#get(activity.object);
-      if (object.type === TYPE_NOTE) {
-        console.log("Ingesting note:", object);
-        await this.ingestNote(object);
+    // Only ingest the note if the activity is not a 'Create' activity.
+    // The 'Create' activity already includes the note information.
+    if (activity.type !== TYPE_CREATE) {
+      let note;
+      if (typeof activity.object === "string") {
+        note = await this.#get(activity.object);
+      } else {
+        note = activity.object;
+        note.isPartOfCreateActivity = true;
+        console.log("Ingesting note:", note);
+        await this.ingestNote(note);
       }
-    } else if (activity.type === TYPE_DELETE) {
-      await this.deleteNote(activity.object);
+
+      if (note.type === TYPE_NOTE) {
+        note.id = activity.id; // Use the Create activity's ID for the note ID
+        console.log("Ingesting note:", note);
+        await this.ingestNote(note);
+      }
     }
   }
 
@@ -210,7 +243,11 @@ export class ActivityPubDB {
     note.published = new Date(note.published);
     // Add tag_names field
     note.tag_names = (note.tags || []).map(({ name }) => name);
-    this.db.put(NOTES_STORE, note);
+    // Check if the note is already in the database to avoid duplicates
+    const existingNote = await this.db.get(NOTES_STORE, note.id);
+    if (!existingNote) {
+      await this.db.put(NOTES_STORE, note);
+    }
     // TODO: Loop through replies
   }
 
