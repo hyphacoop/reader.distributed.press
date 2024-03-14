@@ -21,21 +21,29 @@ class ReaderTimeline extends HTMLElement {
     for (const actorUrl of this.actorUrls) {
       try {
         console.log("Loading actor:", actorUrl);
-        const actorData = await db.ingestActor(actorUrl);
-        const notes = await db.searchNotes({ attributedTo: actorData });
-
-        notes.forEach((note) => {
-          if (!this.processedNotes.has(note.id)) {
-            console.log(note.id);
-            const activityElement = document.createElement("distributed-post");
-            activityElement.setAttribute("url", note.id);
-            this.appendChild(activityElement);
-            this.processedNotes.add(note.id); // Mark this note as processed
-          }
-        });
+        await db.ingestActor(actorUrl);
       } catch (error) {
         console.error(`Error loading actor ${actorUrl}:`, error);
       }
+    }
+
+    // After ingesting all actors, search for all notes once
+    try {
+      const allNotes = await db.searchNotes({});
+      // Sort all notes by published date in descending order
+      allNotes.sort((a, b) => new Date(b.published) - new Date(a.published));
+
+      // Create and append elements for each note
+      allNotes.forEach((note) => {
+        if (!this.processedNotes.has(note.id)) {
+          const activityElement = document.createElement("distributed-post");
+          activityElement.setAttribute("url", note.id);
+          this.appendChild(activityElement);
+          this.processedNotes.add(note.id); // Mark this note as processed
+        }
+      });
+    } catch (error) {
+      console.error(`Error retrieving notes:`, error);
     }
   }
 }
