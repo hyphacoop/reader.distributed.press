@@ -152,19 +152,12 @@ export class ActivityPubDB {
   }
 
   async ingestActivityCollection (collectionOrUrl, actorId) {
-    let collection
     console.log(
       `Fetching collection for actor ID ${actorId}:`,
       collectionOrUrl
     )
 
-    if (typeof collectionOrUrl === 'string') {
-      // If the collection is a URL, fetch it first
-      collection = await this.#get(collectionOrUrl)
-    } else {
-      // If the collection is an object, use it directly
-      collection = collectionOrUrl
-    }
+    const collection = await this.#get(collectionOrUrl)
 
     for await (const activity of this.iterateCollection(collection)) {
       await this.ingestActivity(activity, actorId)
@@ -181,15 +174,8 @@ export class ActivityPubDB {
     }
 
     for (const itemOrUrl of items) {
-      let activity
-      if (typeof itemOrUrl === 'string') {
-        // Fetch the individual activity if the item is a URL
-        activity = await this.#get(itemOrUrl)
-      } else {
-        // Use the item directly if it's an object
-        activity = itemOrUrl
-      }
-
+      const activity = await this.#get(itemOrUrl)
+      
       if (activity) {
         yield activity
       }
