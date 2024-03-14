@@ -8,6 +8,7 @@ class ReaderTimeline extends HTMLElement {
       "https://hypha.coop/about.jsonld",
       "https://prueba-cola-de-moderacion-2.sutty.nl/about.jsonld",
     ];
+    this.processedNotes = new Set(); // To keep track of notes already processed
   }
 
   connectedCallback() {
@@ -24,10 +25,13 @@ class ReaderTimeline extends HTMLElement {
         const notes = await db.searchNotes({ attributedTo: actorData });
 
         notes.forEach((note) => {
-          console.log(note.id);
-          const activityElement = document.createElement("distributed-post");
-          activityElement.setAttribute("url", note.id);
-          this.appendChild(activityElement);
+          if (!this.processedNotes.has(note.id)) {
+            console.log(note.id);
+            const activityElement = document.createElement("distributed-post");
+            activityElement.setAttribute("url", note.id);
+            this.appendChild(activityElement);
+            this.processedNotes.add(note.id); // Mark this note as processed
+          }
         });
       } catch (error) {
         console.error(`Error loading actor ${actorUrl}:`, error);
