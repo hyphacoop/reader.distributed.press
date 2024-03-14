@@ -1,12 +1,12 @@
-import { ActivityPubDB } from "./db.js";
+import { db } from "./dbInstance.js";
 
 class ReaderTimeline extends HTMLElement {
   constructor() {
     super();
     // Default outbox URLs to fetch and display in the timeline
     this.outboxUrls = [
-      "https://staticpub.mauve.moe/outbox.jsonld",
-      "https://hypha.coop/outbox.jsonld",
+      "ipns://staticpub.mauve.moe/outbox.jsonld",
+      "ipns://hypha.coop/outbox.jsonld",
     ];
   }
 
@@ -15,8 +15,6 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline() {
-    const db = await ActivityPubDB.load();
-
     // Clear existing content
     this.innerHTML = "";
 
