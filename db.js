@@ -98,11 +98,9 @@ export class ActivityPubDB {
   async getAllActors() {
     const tx = this.db.transaction(ACTORS_STORE);
     const actors = [];
-    let cursor = await tx.store.openCursor();
 
-    while (cursor) {
+    for await (const cursor of tx.store) {
       actors.push(cursor.value);
-      cursor = await cursor.continue();
     }
 
     return actors;

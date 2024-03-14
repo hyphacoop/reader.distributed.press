@@ -5,8 +5,8 @@ class ReaderTimeline extends HTMLElement {
     super();
     // Default outbox URLs to fetch and display in the timeline
     this.outboxUrls = [
-      "ipns://staticpub.mauve.moe/outbox.jsonld",
-      "ipns://hypha.coop/outbox.jsonld",
+      "https://staticpub.mauve.moe/outbox.jsonld",
+      "https://hypha.coop/outbox.jsonld",
     ];
   }
 
