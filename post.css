@@ -72,6 +72,7 @@ img {
   color: var(--rdp-text-color);
   padding: 6px;
   margin-bottom: 16px;
+  overflow-wrap: break-word;
 }
 
 .post-footer {
