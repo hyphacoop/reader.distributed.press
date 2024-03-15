@@ -7,3 +7,18 @@
 html {
   background: var(--bg-color);
 }
+
+@media (max-width: 600px) {
+  .container {
+    flex-direction: column-reverse;
+  }
+
+  .sidebar {
+    width: 100%;
+    text-align: center; /* Optional: Center the navigation links if desired */
+  }
+
+  reader-timeline {
+    width: 100%;
+  }
+}
