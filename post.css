@@ -79,3 +79,22 @@ img {
   font-size: 0.875rem;
   color: var(--rdp-details-color);
 }
+
+@media (max-width: 768px) {
+  .distributed-post {
+    max-width: 80%;
+    padding: 12px;
+    margin: 8px auto;
+  }
+
+  .post-content,
+  .post-footer,
+  .time-ago {
+    font-size: 0.875rem;
+  }
+
+  .actor-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
