@@ -1,13 +1,25 @@
 <!DOCTYPE html>
-<title>Distributed Press Reader</title>
+<title>Reader Post</title>
 <style>
-	@import url("./style.css")
+  @import url("./post.css");
 </style>
+<div id="post-container">
+  <!-- https://staticpub.mauve.moe/helloworld.html -->
+  <!-- hyper://staticpub.mauve.moe/helloworld.html -->
+  <!-- ipfs://bafybeifslnipwp5uanmhkckokwuse7h5gfrrjzqq4jg5oxewxbzrdcdawu -->
+  <distributed-post id="distributedPost"></distributed-post>
+</div>
 
-- TODO:
-- Load post from `window.location.searchParams.get("url")`
-- Fetch json
-- render content
-- fetch actor info and render it
-- refactor into reusable web component that takes the url as an attribute.
-- factor out the avatar/profile name rendering into a separate component that gets nested
+<script type="module" src="./post.js"></script>
+<!-- Dynamically set post URL from query string parameter -->
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const postUrl = params.get("url");
+
+  if (postUrl) {
+    const postElement = document.getElementById("distributedPost");
+    postElement.setAttribute("url", postUrl);
+  } else {
+    console.error("URL parameter is missing");
+  }
+</script>
