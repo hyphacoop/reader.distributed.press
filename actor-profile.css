@@ -1,0 +1,74 @@
+.actor-profile {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.actor-container {
+  margin-bottom: 10px;
+}
+
+.distributed-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.actor-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #000000;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.actor-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.actor-name {
+  color: var(--rdp-text-color);
+  font-weight: bold;
+}
+
+#followButton {
+  appearance: none;
+  border: 1px solid rgba(27, 31, 35, 0.15);
+  border-radius: 4px;
+  box-shadow: rgba(27, 31, 35, 0.1) 0 1px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-block;
+  font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial,
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 4px 16px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+#followButton.follow {
+  background-color: #3b82f6;
+  color: #fff;
+}
+#followButton.follow:hover {
+  background-color: #2563eb;
+}
+
+#followButton.unfollow {
+  background-color: #ef4444;
+  color: #fff;
+}
+#followButton.unfollow:hover {
+  background-color: #dc2626;
+}

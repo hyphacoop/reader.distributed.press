@@ -30,6 +30,21 @@ body {
   margin-bottom: 0.6em;
 }
 
+.controls {
+  margin-bottom: 0.4em;
+}
+
+.controls a {
+  color: var(--rdp-details-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: bold;
+  margin-bottom: 0.4em;
+}
+.controls a:hover {
+  text-decoration: underline;
+}
+
 .sidebar nav {
   display: flex;
   flex-direction: column;

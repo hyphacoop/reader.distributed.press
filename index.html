@@ -11,6 +11,11 @@
 <div class="container">
   <div class="sidebar">
     <h1>Social Reader</h1>
+    <div class="controls">
+      <a href="./followed-accounts.html"
+        >Following · <span id="followCount">0</span></a
+      >
+    </div>
     <nav>
       <a href="https://github.com/hyphacoop/reader.distributed.press">GitHub</a>
       <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
@@ -21,7 +26,12 @@
   </div>
   <reader-timeline></reader-timeline>
 </div>
+<script type="module">
+  import { updateFollowCount } from "./followed-accounts.js";
+  updateFollowCount();
+</script>
 <script type="module" src="./dbInstance.js"></script>
 <script type="module" src="./timeline.js"></script>
 <script type="module" src="./outbox.js"></script>
 <script type="module" src="./post.js"></script>
+<script type="module" src="./followed-accounts.js"></script>

@@ -4,6 +4,7 @@ export const DEFAULT_DB = 'default'
 export const ACTORS_STORE = 'actors'
 export const NOTES_STORE = 'notes'
 export const ACTIVITIES_STORE = 'activities'
+export const FOLLOWED_ACTORS_STORE = 'followedActors';
 
 export const ID_FIELD = 'id'
 export const URL_FIELD = 'url'
@@ -246,6 +247,46 @@ export class ActivityPubDB {
     // delete note using the url as the `id` from the notes store
     this.db.delete(NOTES_STORE, url)
   }
+
+  // Method to follow an actor
+  async followActor(url) {
+    const followedAt = new Date();
+    await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt });
+    console.log(`Followed actor: ${url} at ${followedAt}`);
+  }
+
+  // Method to unfollow an actor
+  async unfollowActor(url) {
+    await this.db.delete(FOLLOWED_ACTORS_STORE, url);
+    console.log(`Unfollowed actor: ${url}`);
+  }
+
+  // Method to retrieve all followed actors
+  async getFollowedActors() {
+    const tx = this.db.transaction(FOLLOWED_ACTORS_STORE, 'readonly');
+    const store = tx.objectStore(FOLLOWED_ACTORS_STORE);
+    const followedActors = [];
+    for await (const cursor of store) {
+      followedActors.push(cursor.value);
+    }
+    return followedActors;
+  }
+
+  // Method to check if an actor is followed
+  async isActorFollowed(url) {
+    try {
+      const record = await this.db.get(FOLLOWED_ACTORS_STORE, url);
+      return !!record; // Convert the record to a boolean indicating if the actor is followed
+    } catch (error) {
+      console.error(`Error checking if actor is followed: ${url}`, error);
+      return false; // Assume not followed if there's an error
+    }
+  }
+
+  async hasFollowedActors() {
+    const followedActors = await this.getFollowedActors();
+    return followedActors.length > 0;
+  }
 }
 
 function upgrade (db) {
@@ -257,6 +298,12 @@ function upgrade (db) {
   actors.createIndex(CREATED_FIELD, CREATED_FIELD)
   actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
   actors.createIndex(URL_FIELD, URL_FIELD)
+
+  if (!db.objectStoreNames.contains(FOLLOWED_ACTORS_STORE)) {
+    db.createObjectStore(FOLLOWED_ACTORS_STORE, {
+      keyPath: "url",
+    });
+  }
 
   const notes = db.createObjectStore(NOTES_STORE, {
     keyPath: 'id',

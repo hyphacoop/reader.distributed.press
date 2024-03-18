@@ -148,7 +148,7 @@ async function loadPostFromHyper(hyperUrl) {
   }
 }
 
-async function fetchActorInfo(actorUrl) {
+export async function fetchActorInfo(actorUrl) {
   try {
     const response = await fetch(actorUrl);
     if (!response.ok) {
@@ -388,10 +388,20 @@ class ActorInfo extends HTMLElement {
     return ["url"];
   }
 
+  constructor() {
+    super();
+    this.actorUrl = '';
+  }
+
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "url" && newValue) {
+      this.actorUrl = newValue;
       this.fetchAndRenderActorInfo(newValue);
     }
+  }
+
+  navigateToActorProfile() {
+    window.location.href = `/profile.html?actor=${encodeURIComponent(this.actorUrl)}`;
   }
 
   async fetchAndRenderActorInfo(url) {
@@ -421,6 +431,7 @@ class ActorInfo extends HTMLElement {
             img.classList.add("actor-icon");
             img.src = iconUrl;
             img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
+            img.addEventListener('click', this.navigateToActorProfile.bind(this));
             author.appendChild(img);
           }
         }
@@ -429,6 +440,7 @@ class ActorInfo extends HTMLElement {
           const pName = document.createElement("div");
           pName.classList.add("actor-name");
           pName.textContent = actorInfo.name;
+          pName.addEventListener('click', this.navigateToActorProfile.bind(this));
           authorDetails.appendChild(pName);
         }
 

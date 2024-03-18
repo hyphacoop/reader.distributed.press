@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>User Profile</title>
+<style>
+  @import url("./actor-profile.css");
+  @import url("./outbox.css");
+  @import url("./post.css");
+</style>
+<actor-profile></actor-profile>
+<distributed-outbox></distributed-outbox>
+<div class="pagination-controls">
+  <button id="prevPage">< Previous</button>
+  <button id="nextPage">Next ></button>
+</div>
+<script>
+  const outboxElement = document.querySelector("distributed-outbox");
+  const prevButton = document.getElementById("prevPage");
+  const nextButton = document.getElementById("nextPage");
+
+  if (prevButton) {
+    prevButton.addEventListener("click", () => outboxElement.prevPage());
+  }
+  if (nextButton) {
+    nextButton.addEventListener("click", () => outboxElement.nextPage());
+  }
+</script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const actorUrl = params.get("actor");
+
+  if (actorUrl) {
+    const actorProfile = document.querySelector("actor-profile");
+    actorProfile.setAttribute("url", actorUrl);
+  } else {
+    console.error("Actor URL not specified in the query string.");
+  }
+</script>
+<script type="module" src="./actor-profile.js"></script>
+<script type="module" src="./post.js"></script>
+<script type="module" src="./outbox.js"></script>

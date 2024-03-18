@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<title>Followed Accounts</title>
+<style>
+  @import url("./index.css");
+  @import url("./post.css");
+  @import url("./followed-accounts.css");
+</style>
+<div class="followed-container">
+  <p>
+    You're following <span id="followCount">0</span> accounts.<br /><span
+      >Import and export followed list coming soon..</span
+    >
+  </p>
+  <div id="followedList"></div>
+</div>
+<script type="module">
+  import { updateFollowCount } from "./followed-accounts.js";
+  updateFollowCount();
+</script>
+<script type="module" src="followed-accounts.js"></script>

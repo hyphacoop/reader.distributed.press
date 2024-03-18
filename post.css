@@ -45,6 +45,7 @@ img {
   border-radius: 50%;
   background-color: #000000;
   margin-right: 8px;
+  cursor: pointer;
 }
 
 .actor-details {
@@ -55,6 +56,7 @@ img {
 .actor-name {
   color: var(--rdp-text-color);
   font-weight: bold;
+  cursor: pointer;
 }
 
 .actor-username {
