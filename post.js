@@ -418,23 +418,21 @@ class ActorInfo extends HTMLElement {
         authorDetails.classList.add("actor-details");
 
         // Handle both single icon object and array of icons
-        let iconUrl = null;
+        let iconUrl = './assets/profile.png'; // Default profile image path
         if (actorInfo.icon) {
           if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
             iconUrl = actorInfo.icon[0].url;
           } else if (actorInfo.icon.url) {
             iconUrl = actorInfo.icon.url;
           }
-
-          if (iconUrl) {
-            const img = document.createElement("img");
-            img.classList.add("actor-icon");
-            img.src = iconUrl;
-            img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
-            img.addEventListener('click', this.navigateToActorProfile.bind(this));
-            author.appendChild(img);
-          }
         }
+        
+        const img = document.createElement("img");
+        img.classList.add("actor-icon");
+        img.src = iconUrl;
+        img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
+        img.addEventListener('click', this.navigateToActorProfile.bind(this));
+        author.appendChild(img);
 
         if (actorInfo.name) {
           const pName = document.createElement("div");

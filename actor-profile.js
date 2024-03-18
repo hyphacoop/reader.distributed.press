@@ -40,22 +40,20 @@ class ActorProfile extends HTMLElement {
     actorContainer.classList.add("actor-container");
 
     // Handle both single icon object and array of icons
-    let iconUrl = null;
+    let iconUrl = './assets/profile.png'; // Default profile image path
     if (actorInfo.icon) {
       if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
         iconUrl = actorInfo.icon[0].url;
       } else if (actorInfo.icon.url) {
         iconUrl = actorInfo.icon.url;
       }
-
-      if (iconUrl) {
-        const img = document.createElement("img");
-        img.classList.add("actor-icon");
-        img.src = iconUrl;
-        img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
-        actorContainer.appendChild(img); // Append to the actor container
-      }
     }
+  
+    const img = document.createElement("img");
+    img.classList.add("actor-icon");
+    img.src = iconUrl;
+    img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
+    actorContainer.appendChild(img); // Append to the actor container
 
     if (actorInfo.name) {
       const pName = document.createElement("div");
