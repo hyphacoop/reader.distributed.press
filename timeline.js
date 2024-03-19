@@ -22,9 +22,11 @@ class ReaderTimeline extends HTMLElement {
     // Check if followed actors have already been initialized
     const hasFollowedActors = await db.hasFollowedActors();
     if (!hasFollowedActors) {
-      for (const actorUrl of defaultActors) {
-        await db.followActor(actorUrl);
-      }
+      await Promise.all(
+        defaultActors.map(async (actorUrl) => {
+          await db.followActor(actorUrl);
+        })
+      );
     }
   }
 
@@ -33,7 +35,7 @@ class ReaderTimeline extends HTMLElement {
 
     // Dynamically load followed actors
     const followedActors = await db.getFollowedActors();
-    const actorUrls = followedActors.map(actor => actor.url);
+    const actorUrls = followedActors.map((actor) => actor.url);
 
     for (const actorUrl of actorUrls) {
       try {
