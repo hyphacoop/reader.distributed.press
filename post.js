@@ -1,164 +1,6 @@
+/* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
-
-const ACCEPT_HEADER =
-  'application/activity+json, application/ld+json, application/json, text/html'
-
-async function loadPost (url) {
-  try {
-    const headers = new Headers({ Accept: ACCEPT_HEADER })
-
-    const response = await fetch(url, { headers })
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
-
-    const contentType = response.headers.get('content-type')
-    if (
-      contentType.includes('application/ld+json') ||
-      contentType.includes('application/activity+json') ||
-      contentType.includes('application/json')
-    ) {
-      // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
-      return await response.json()
-    } else if (contentType.includes('text/html')) {
-      // For HTML responses, look for the link in the HTTP headers
-      const linkHeader = response.headers.get('Link')
-      if (linkHeader) {
-        const matches = linkHeader.match(
-          /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
-        )
-        if (matches && matches[1]) {
-          // Found JSON-LD link in headers, fetch that URL
-          return fetchJsonLd(matches[1])
-        }
-      }
-      // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
-      const htmlContent = await response.text()
-      const jsonLdUrl = await parsePostHtml(htmlContent)
-      if (jsonLdUrl) {
-        // Found JSON-LD link in HTML, fetch that URL
-        return fetchJsonLd(jsonLdUrl)
-      }
-      // No JSON-LD link found in HTML
-      throw new Error('No JSON-LD link found in the response')
-    }
-  } catch (error) {
-    console.error('Error fetching post:', error)
-  }
-}
-
-async function parsePostHtml (htmlContent) {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(htmlContent, 'text/html')
-  const alternateLink = doc.querySelector('link[rel="alternate"]')
-  return alternateLink ? alternateLink.href : null
-}
-
-async function fetchJsonLd (jsonLdUrl) {
-  try {
-    const headers = new Headers({
-      Accept: 'application/ld+json'
-    })
-
-    const response = await fetch(jsonLdUrl, { headers })
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching JSON-LD:', error)
-  }
-}
-
-// async function loadPostFromIpfs(ipfsUrl) {
-//   try {
-//     // Try loading content using native IPFS URLs
-//     const nativeResponse = await fetch(ipfsUrl);
-//     if (nativeResponse.ok) {
-//       return await nativeResponse.text();
-//     }
-//   } catch (error) {
-//     console.log("Native IPFS loading failed, trying HTTP gateway:", error);
-//   }
-
-//   // Fallback to loading content via an HTTP IPFS gateway
-//   const gatewayUrl = ipfsUrl.replace("ipfs://", "https://ipfs.hypha.coop/ipfs/");
-//   try {
-//     const gatewayResponse = await fetch(gatewayUrl);
-//     if (!gatewayResponse.ok) {
-//       throw new Error(`HTTP error! Status: ${gatewayResponse.status}`);
-//     }
-//     return await gatewayResponse.text();
-//   } catch (error) {
-//     console.error("Error fetching IPFS content via HTTP gateway:", error);
-//   }
-// }
-
-// Function to load content from IPNS with fallback to the IPNS HTTP gateway
-async function loadPostFromIpns (ipnsUrl) {
-  try {
-    const nativeResponse = await fetch(ipnsUrl)
-    if (nativeResponse.ok) {
-      return await nativeResponse.text()
-    }
-  } catch (error) {
-    console.log('Native IPNS loading failed, trying HTTP gateway:', error)
-  }
-
-  // Fallback to loading content via an HTTP IPNS gateway
-  const gatewayUrl = ipnsUrl.replace(
-    'ipns://',
-    'https://ipfs.hypha.coop/ipns/'
-  )
-  try {
-    const gatewayResponse = await fetch(gatewayUrl)
-    if (!gatewayResponse.ok) {
-      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`)
-    }
-    return await gatewayResponse.text()
-  } catch (error) {
-    console.error('Error fetching IPNS content via HTTP gateway:', error)
-  }
-}
-
-// Function to load content from Hyper with fallback to the Hyper HTTP gateway
-async function loadPostFromHyper (hyperUrl) {
-  try {
-    const nativeResponse = await fetch(hyperUrl)
-    if (nativeResponse.ok) {
-      return await nativeResponse.text()
-    }
-  } catch (error) {
-    console.log('Native Hyper loading failed, trying HTTP gateway:', error)
-  }
-
-  // Fallback to loading content via an HTTP Hyper gateway
-  const gatewayUrl = hyperUrl.replace(
-    'hyper://',
-    'https://hyper.hypha.coop/hyper/'
-  )
-  try {
-    const gatewayResponse = await fetch(gatewayUrl)
-    if (!gatewayResponse.ok) {
-      throw new Error(`HTTP error! Status: ${gatewayResponse.status}`)
-    }
-    return await gatewayResponse.text()
-  } catch (error) {
-    console.error('Error fetching Hyper content via HTTP gateway:', error)
-  }
-}
-
-export async function fetchActorInfo (actorUrl) {
-  try {
-    const response = await fetch(actorUrl)
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching actor info:', error)
-  }
-}
+import { db } from './dbInstance.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -221,46 +63,12 @@ class DistributedPost extends HTMLElement {
     }
 
     try {
-      // Check if the URL directly points to a JSON-LD document
-      if (postUrl.endsWith('.jsonld')) {
-        const jsonLdData = await fetchJsonLd(postUrl)
-        this.renderPostContent(jsonLdData)
-        return
-      }
+      const content = await db.getNote(postUrl)
 
-      // Handle different URL schemes and HTML content
-      let content
-      // if (postUrl.startsWith("ipfs://")) {
-      //   content = await loadPostFromIpfs(postUrl);
-      // }
-      // Attempt to load content using native URLs or HTTP gateways based on the scheme
-      if (postUrl.startsWith('ipns://')) {
-        content = await loadPostFromIpns(postUrl)
-      } else if (postUrl.startsWith('hyper://')) {
-        content = await loadPostFromHyper(postUrl)
-      } else if (postUrl.startsWith('https://')) {
-        content = await loadPost(postUrl)
-      } else {
-        this.renderErrorContent('Unsupported URL scheme')
-        return
-      }
-
-      // For HTML content, attempt to find and fetch JSON-LD link within the content
-      if (typeof content === 'object' && !content.summary) {
-        // Assuming JSON-LD content has a "summary" field
-        this.renderPostContent(content)
-      } else if (typeof content === 'string') {
-        const jsonLdUrl = await parsePostHtml(content)
-        if (jsonLdUrl) {
-          const jsonLdData = await fetchJsonLd(jsonLdUrl)
-          this.renderPostContent(jsonLdData)
-        } else {
-          this.renderErrorContent('JSON-LD URL not found in the post')
-        }
-      } else {
-        this.renderErrorContent('Invalid content type')
-      }
+      // Assuming JSON-LD content has a "summary" field
+      this.renderPostContent(content)
     } catch (error) {
+      console.error(error)
       this.renderErrorContent(error.message)
     }
   }
@@ -406,7 +214,7 @@ class ActorInfo extends HTMLElement {
 
   async fetchAndRenderActorInfo (url) {
     try {
-      const actorInfo = await fetchActorInfo(url)
+      const actorInfo = await db.getActor(url)
       if (actorInfo) {
         // Clear existing content
         this.innerHTML = ''

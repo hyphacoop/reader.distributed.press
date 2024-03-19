@@ -26,9 +26,19 @@ export const TYPE_UPDATE = 'Update'
 export const TYPE_NOTE = 'Note'
 export const TYPE_DELETE = 'Delete'
 
+export const HYPER_PREFIX = 'hyper://'
+export const IPNS_PREFIX = 'ipns://'
+
+const ACCEPT_HEADER =
+'application/activity+json, application/ld+json, application/json, text/html'
+
 // TODO: When ingesting notes and actors, wrap any dates in `new Date()`
 // TODO: When ingesting notes add a "tag_names" field which is just the names of the tag
 // TODO: When ingesting notes, also load their replies
+
+export function isP2P (url) {
+  return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
+}
 
 export class ActivityPubDB {
   constructor (db, fetch = globalThis.fetch) {
@@ -44,49 +54,107 @@ export class ActivityPubDB {
     return new ActivityPubDB(db, fetch)
   }
 
+  #fetch (...args) {
+    const { fetch } = this
+    return fetch(...args)
+  }
+
+  #gateWayFetch (url, options = {}) {
+    let gatewayUrl = url
+    // TODO: Don't hardcode the gateway
+    if (url.startsWith(HYPER_PREFIX)) {
+      gatewayUrl = url.replace(HYPER_PREFIX, 'https://hyper.hypha.coop/hyper/')
+    } else if (url.startsWith(IPNS_PREFIX)) {
+      gatewayUrl = url.replace(IPNS_PREFIX, 'https://ipfs.hypha.coop/ipns/')
+    }
+
+    return this.#fetch(gatewayUrl, options)
+  }
+
+  #proxiedFetch (url, options = {}) {
+    const proxiedURL = 'https://corsproxy.io/?' + encodeURIComponent(url)
+    return this.#fetch(proxiedURL, options)
+  }
+
   async #get (url) {
     if (url && typeof url === 'object') {
       return url
     }
 
+    /* TODO: Incorporate this logic
+
+    const headers = new Headers({ Accept: ACCEPT_HEADER });
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (
+      contentType.includes("application/ld+json") ||
+      contentType.includes("application/activity+json") ||
+      contentType.includes("application/json")
+    ) {
+      // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
+      return await response.json();
+    } else if (contentType.includes("text/html")) {
+      // For HTML responses, look for the link in the HTTP headers
+      const linkHeader = response.headers.get("Link");
+      if (linkHeader) {
+        const matches = linkHeader.match(
+          /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
+        );
+        if (matches && matches[1]) {
+          // Found JSON-LD link in headers, fetch that URL
+          return fetchJsonLd(matches[1]);
+        }
+      }
+      // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
+      const htmlContent = await response.text();
+      const jsonLdUrl = await parsePostHtml(htmlContent);
+      if (jsonLdUrl) {
+        // Found JSON-LD link in HTML, fetch that URL
+        return fetchJsonLd(jsonLdUrl);
+      }
+      // No JSON-LD link found in HTML
+      throw new Error("No JSON-LD link found in the response");
+    }
+    */
+
+    // TODO: Resolve html with link tags
+
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch
     try {
-      response = await this.fetch.call(globalThis, url, {
+      response = await this.#fetch(url, {
         headers: {
           Accept: 'application/json'
         }
       })
     } catch (error) {
-      console.error('P2P loading failed, trying HTTP gateway:', error)
-    }
-
-    // If direct fetch was not successful, attempt fetching from a gateway for P2P protocols
-    if (!response || !response.ok) {
-      let gatewayUrl = url
-
-      if (url.startsWith('hyper://')) {
-        gatewayUrl = url.replace('hyper://', 'https://hyper.hypha.coop/hyper/')
-      } else if (url.startsWith('ipns://')) {
-        gatewayUrl = url.replace('ipns://', 'https://ipfs.hypha.coop/ipns/')
-      }
-
-      try {
-        response = await this.fetch.call(globalThis, gatewayUrl, {
+      if (isP2P(url)) {
+        // Maybe the browser can't load p2p URLs
+        response = await this.#gateWayFetch(url, {
           headers: {
             Accept: 'application/json'
           }
         })
-      } catch (error) {
-        console.error('Fetching from gateway failed:', error)
-        throw new Error(`Failed to fetch ${url} from gateway`)
+      } else {
+        // Try the proxy, maybe it's cors?
+        response = await this.#proxiedFetch(url, {
+          headers: {
+            Accept: 'application/json'
+          }
+        })
       }
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
+      throw new Error(`HTTP error! Status: ${response.status}.\n${url}\n${await response.text()}`)
     }
+
     return await response.json()
   }
 
@@ -110,12 +178,43 @@ export class ActivityPubDB {
 
   async getNote (url) {
     try {
-      return this.db.get(NOTES_STORE, url)
+      const note = await this.db.get(NOTES_STORE, url)
+      if(!note) throw new Error('Not loaded')
+      return note
     } catch {
       const note = await this.#get(url)
       await this.ingestNote(note)
       return note
     }
+  }
+
+  async getActivity (url) {
+    try {
+      return this.db.get(ACTIVITIES_STORE, url)
+    } catch {
+      const activity = await this.#get(url)
+      await this.ingestActivity(activity)
+      return activity
+    }
+  }
+
+  async * searchActivities (actor, { limit = 32, skip = 0 } = {}) {
+    const indexName = ACTOR_FIELD + ', published'
+    const tx = this.db.transaction(ACTIVITIES_STORE, 'read')
+    const index = tx.store.index(indexName)
+
+    let count = 0
+
+    for await (const cursor of index.iterate(actor)) {
+      if (count === 0) {
+        cursor.advance(skip)
+      }
+      yield cursor.value
+      count++
+      if (count >= limit) break
+    }
+
+    await tx.done()
   }
 
   async searchNotes (criteria) {
@@ -158,27 +257,58 @@ export class ActivityPubDB {
       collectionOrUrl
     )
 
-    const collection = await this.#get(collectionOrUrl)
-
-    for await (const activity of this.iterateCollection(collection)) {
+    for await (const activity of this.iterateCollection(collectionOrUrl)) {
       await this.ingestActivity(activity, actorId)
     }
   }
 
-  async * iterateCollection (collection) {
+  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32, resolve = true } = {}) {
+    const collection = await this.#get(collectionOrUrl)
+
     // TODO: handle pagination here, if collection contains a 'next' or 'first' link.
     const items = collection.orderedItems || collection.items
 
-    if (!items) {
-      console.error('No items found in collection:', collection)
-      return // Exit if no items to iterate over
+    let toSkip = skip
+    let count = 0
+
+    if (items) {
+      for await (const item of this.#getAll(items)) {
+        if (toSkip) {
+          toSkip--
+        } else {
+          yield item
+          count++
+        }
+        if (count === limit) return
+      }
+
+      return
     }
 
-    for (const itemOrUrl of items) {
-      const activity = await this.#get(itemOrUrl)
+    // TODO: Error if no first page
+    let next = collection.first
+    while (next) {
+      const page = await this.#get(next)
+      next = page.next
+      const items = page.orderedItems || page.items
+      for await (const item of this.#getAll(items)) {
+        if (toSkip) {
+          toSkip--
+        } else {
+          yield item
+          count++
+        }
+        if (count === limit) return
+      }
+    }
+  }
 
-      if (activity) {
-        yield activity
+  async * #getAll (items) {
+    for (const itemOrUrl of items) {
+      const item = await this.#get(itemOrUrl)
+
+      if (item) {
+        yield item
       }
     }
   }
@@ -322,6 +452,7 @@ function upgrade (db) {
   })
   addSortedIndex(activities, ACTOR_FIELD)
   addSortedIndex(activities, TO_FIELD)
+  addRegularIndex(activities, PUBLISHED_FIELD)
 
   function addRegularIndex (store, field, options = {}) {
     store.createIndex(field, field, options)
@@ -329,4 +460,11 @@ function upgrade (db) {
   function addSortedIndex (store, field, options = {}) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
+}
+
+async function parsePostHtml (htmlContent) {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlContent, 'text/html')
+  const alternateLink = doc.querySelector('link[rel="alternate"]')
+  return alternateLink ? alternateLink.href : null
 }

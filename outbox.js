@@ -1,3 +1,5 @@
+import { db } from './dbInstance.js'
+
 class DistributedOutbox extends HTMLElement {
   constructor () {
     super()
@@ -44,59 +46,19 @@ class DistributedOutbox extends HTMLElement {
       return
     }
 
-    try {
-      let response
-      // Check the scheme and adjust the URL for unsupported schemes before fetching
-      if (outboxUrl.startsWith('hyper://')) {
-        const gatewayUrl = outboxUrl.replace(
-          'hyper://',
-          'https://hyper.hypha.coop/hyper/'
-        )
-        response = await fetch(gatewayUrl)
-      } else if (outboxUrl.startsWith('ipns://')) {
-        const gatewayUrl = outboxUrl.replace(
-          'ipns://',
-          'https://ipfs.hypha.coop/ipns/'
-        )
-        response = await fetch(gatewayUrl)
-      } else {
-        response = await fetch(outboxUrl)
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
-      }
-      const outbox = await response.json()
-
-      // Adjust for both direct items and items loaded via URLs
-      const items = []
-      for (const itemOrUrl of outbox.orderedItems) {
-        if (typeof itemOrUrl === 'string') {
-          // URL to an activity
-          const itemResponse = await fetch(itemOrUrl)
-          if (itemResponse.ok) {
-            const item = await itemResponse.json()
-            items.push(item)
-          }
-        } else {
-          items.push(itemOrUrl) // Directly included activity
-        }
-      }
-
-      this.totalPages = Math.ceil(items.length / this.numPosts)
-      this.page = Math.min(this.page, this.totalPages)
+    /*
+    this.totalPages = Math.ceil(items.length / this.numPosts);
+    this.page = Math.min(this.page, this.totalPages);
 
       // Calculate the range of items to be loaded based on the current page and numPosts
-      const startIndex = (this.page - 1) * this.numPosts
-      const endIndex = startIndex + this.numPosts
-      const itemsToLoad = items.slice(startIndex, endIndex)
+      const startIndex = (this.page - 1) * this.numPosts;
+      const endIndex = startIndex + this.numPosts;
 
-      for (const item of itemsToLoad) {
-        yield item
-      }
-    } catch (error) {
-      console.error('Error fetching outbox:', error)
-    }
+      const itemsToLoad = items.slice(startIndex, endIndex);
+      */
+
+    // TODO: Ingest actor and searchActivities instead
+    yield * db.iterateCollection(outboxUrl)
   }
 
   renderItem (item) {
@@ -170,11 +132,7 @@ class DistributedActivity extends HTMLElement {
 
   async loadDataFromUrl (activityUrl) {
     try {
-      const response = await fetch(activityUrl)
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
-      }
-      const activityData = await response.json()
+      const activityData = await db.getActivity(activityUrl)
       this.type = activityData.type
       this.data = activityData
       this.connectedCallback()
@@ -197,22 +155,10 @@ class DistributedActivity extends HTMLElement {
     } else {
       postUrl = this.activityData.object
     }
-
-    try {
-      const response = await fetch(postUrl)
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
-      }
-      const postData = await response.json()
-      // Determine how to extract content based on the post source
-      const content = isDirectPost ? postData.content : postData.object.content
-      this.displayPostContent(content, postUrl)
-    } catch (error) {
-      console.error('Error fetching post content:', error)
-    }
+    this.displayPostContent(postUrl)
   }
 
-  displayPostContent (content, url) {
+  displayPostContent (url) {
     // Clear existing content
     this.innerHTML = ''
 
@@ -220,27 +166,6 @@ class DistributedActivity extends HTMLElement {
     const distributedPostElement = document.createElement('distributed-post')
     distributedPostElement.setAttribute('url', url)
     this.appendChild(distributedPostElement)
-  }
-
-  fetchAndUpdatePost (activityData) {
-    let postUrl
-    // Determine the source of the post (direct activity or URL pointing to the activity)
-    const isDirectUpdate =
-      typeof activityData.object === 'string' ||
-      activityData.object instanceof String
-
-    if (isDirectUpdate) {
-      // If it's a direct update, use the URL from the 'object' property
-      postUrl = activityData.object
-    } else if (activityData.object && activityData.object.id) {
-      // If the 'object' property contains an 'id', use it as the URL
-      postUrl = activityData.object.id
-    } else {
-      // Otherwise, use the 'id' property of the activityData itself
-      postUrl = activityData.id
-    }
-
-    this.fetchAndDisplayPost(postUrl)
   }
 
   renderActivity () {
@@ -252,7 +177,11 @@ class DistributedActivity extends HTMLElement {
         this.fetchAndDisplayPost()
         break
       case 'Update':
-        this.fetchAndUpdatePost(this.activityData)
+        this.fetchAndDisplayPost()
+        break
+      case 'Announce':
+        // TODO: Add UI saying this was "reposted"
+        this.fetchAndDisplayPost()
         break
       case 'Follow':
         this.displayFollowActivity()
