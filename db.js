@@ -299,11 +299,9 @@ function upgrade (db) {
   actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
   actors.createIndex(URL_FIELD, URL_FIELD)
 
-  if (!db.objectStoreNames.contains(FOLLOWED_ACTORS_STORE)) {
-    db.createObjectStore(FOLLOWED_ACTORS_STORE, {
-      keyPath: "url",
-    });
-  }
+  db.createObjectStore(FOLLOWED_ACTORS_STORE, {
+    keyPath: "url",
+  });
 
   const notes = db.createObjectStore(NOTES_STORE, {
     keyPath: 'id',
