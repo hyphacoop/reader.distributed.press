@@ -1,9 +1,9 @@
-.actor-profile {
+.profile {
   text-align: center;
   margin-top: 20px;
 }
 
-.actor-container {
+.profile-container {
   margin-bottom: 10px;
 }
 
@@ -14,7 +14,7 @@
   margin-bottom: 16px;
 }
 
-.actor-icon {
+.profile-icon {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -23,12 +23,12 @@
   margin-bottom: 8px;
 }
 
-.actor-details {
+.profile-details {
   display: flex;
   flex-direction: column;
 }
 
-.actor-name {
+.profile-name {
   color: var(--rdp-text-color);
   font-weight: bold;
 }

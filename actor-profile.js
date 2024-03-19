@@ -21,9 +21,6 @@ class ActorProfile extends HTMLElement {
     if (actorInfo) {
       this.renderActorProfile(actorInfo);
       this.updateFollowButtonState();
-      // Update distributed-outbox URL based on fetched actorInfo
-      const distributedOutbox = document.querySelector("distributed-outbox");
-      distributedOutbox.setAttribute("url", actorInfo.outbox);
     }
   }
 
@@ -32,14 +29,14 @@ class ActorProfile extends HTMLElement {
     this.innerHTML = "";
 
     const profileContainer = document.createElement("div");
-    profileContainer.classList.add("actor-profile");
+    profileContainer.classList.add("profile");
 
     // Create a container for the actor icon and name, to center them
     const actorContainer = document.createElement("div");
-    actorContainer.classList.add("actor-container");
+    actorContainer.classList.add("profile-container");
 
     // Handle both single icon object and array of icons
-    let iconUrl = './assets/profile.png'; // Default profile image path
+    let iconUrl = "./assets/profile.png"; // Default profile image path
     if (actorInfo.icon) {
       if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
         iconUrl = actorInfo.icon[0].url;
@@ -47,16 +44,16 @@ class ActorProfile extends HTMLElement {
         iconUrl = actorInfo.icon.url;
       }
     }
-  
+
     const img = document.createElement("img");
-    img.classList.add("actor-icon");
+    img.classList.add("profile-icon");
     img.src = iconUrl;
     img.alt = actorInfo.name ? actorInfo.name : "Actor icon";
     actorContainer.appendChild(img); // Append to the actor container
 
     if (actorInfo.name) {
       const pName = document.createElement("div");
-      pName.classList.add("actor-name");
+      pName.classList.add("profile-name");
       pName.textContent = actorInfo.name;
       actorContainer.appendChild(pName); // Append to the actor container
     }
@@ -70,8 +67,18 @@ class ActorProfile extends HTMLElement {
     followButton.textContent = "Follow";
     profileContainer.appendChild(followButton);
 
+    // Create the distributed-outbox component and append it to the profile container
+    const distributedOutbox = document.createElement("distributed-outbox");
+    profileContainer.appendChild(distributedOutbox);
+
     // Append the profile container to the main component
     this.appendChild(profileContainer);
+
+    // Update distributed-outbox URL based on fetched actorInfo
+    this.querySelector("distributed-outbox").setAttribute(
+      "url",
+      actorInfo.outbox
+    );
   }
 
   async updateFollowButtonState() {
