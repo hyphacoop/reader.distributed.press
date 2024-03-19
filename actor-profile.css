@@ -33,7 +33,7 @@
   font-weight: bold;
 }
 
-#followButton {
+follow-button {
   appearance: none;
   border: 1px solid rgba(27, 31, 35, 0.15);
   border-radius: 4px;
@@ -57,18 +57,18 @@
   white-space: nowrap;
 }
 
-#followButton.follow {
+follow-button[state="follow"] {
   background-color: #3b82f6;
   color: #fff;
 }
-#followButton.follow:hover {
+follow-button[state="follow"]:hover {
   background-color: #2563eb;
 }
 
-#followButton.unfollow {
+follow-button[state="unfollow"] {
   background-color: #ef4444;
   color: #fff;
 }
-#followButton.unfollow:hover {
+follow-button[state="unfollow"]:hover {
   background-color: #dc2626;
 }

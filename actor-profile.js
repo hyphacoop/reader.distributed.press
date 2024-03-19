@@ -20,7 +20,6 @@ class ActorProfile extends HTMLElement {
     console.log(actorInfo);
     if (actorInfo) {
       this.renderActorProfile(actorInfo);
-      this.updateFollowButtonState();
     }
   }
 
@@ -61,10 +60,9 @@ class ActorProfile extends HTMLElement {
     // Append the actor container to the profile container
     profileContainer.appendChild(actorContainer);
 
-    // Create and position the follow button
-    const followButton = document.createElement("button");
-    followButton.id = "followButton";
-    followButton.textContent = "Follow";
+    // Instead of creating a button, create a FollowButton component
+    const followButton = document.createElement("follow-button");
+    followButton.setAttribute("url", this.url);
     profileContainer.appendChild(followButton);
 
     // Create the distributed-outbox component and append it to the profile container
@@ -80,23 +78,53 @@ class ActorProfile extends HTMLElement {
       actorInfo.outbox
     );
   }
-
-  async updateFollowButtonState() {
-    const followButton = this.querySelector("#followButton");
-    const followedActors = await db.getFollowedActors();
-    const isFollowed = followedActors.some((actor) => actor.url === this.url);
-
-    followButton.textContent = isFollowed ? "Unfollow" : "Follow";
-    followButton.className = isFollowed ? "unfollow" : "follow";
-    followButton.onclick = async () => {
-      if (isFollowed) {
-        await db.unfollowActor(this.url);
-      } else {
-        await db.followActor(this.url);
-      }
-      this.updateFollowButtonState();
-    };
-  }
 }
 
 customElements.define("actor-profile", ActorProfile);
+
+class FollowButton extends HTMLElement {
+  static get observedAttributes() {
+    return ["url"];
+  }
+
+  constructor() {
+    super();
+    this.url = this.getAttribute("url") || "";
+    this.state = "unknown";
+  }
+
+  connectedCallback() {
+    this.updateState();
+    this.render();
+    this.addEventListener("click", this.toggleFollowState.bind(this));
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "url" && newValue !== oldValue) {
+      this.url = newValue;
+      this.updateState();
+    }
+  }
+
+  async updateState() {
+    const isFollowed = await db.isActorFollowed(this.url);
+    this.state = isFollowed ? "unfollow" : "follow";
+    this.render();
+  }
+
+  async toggleFollowState() {
+    if (this.state === "follow") {
+      await db.followActor(this.url);
+    } else if (this.state === "unfollow") {
+      await db.unfollowActor(this.url);
+    }
+    this.updateState();
+  }
+
+  render() {
+    this.textContent = this.state === "follow" ? "Follow" : "Unfollow";
+    this.setAttribute("state", this.state);
+  }
+}
+
+customElements.define("follow-button", FollowButton);
