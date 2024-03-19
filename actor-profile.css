@@ -30,6 +30,11 @@
 .profile-name {
   color: var(--rdp-text-color);
   font-weight: bold;
+}
+
+.profile-username {
+  color: var(--rdp-text-color);
+  margin-top: 1px;
   margin-bottom: 10px;
 }
 
