@@ -1,32 +1,38 @@
 import { db } from "./dbInstance.js";
 
-function formatDate(dateString) {
-  const options = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  };
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", options);
+class FollowedActorsList extends HTMLElement {
+  constructor() {
+    super();
+  }
+
+  connectedCallback() {
+    this.renderFollowedActors();
+  }
+
+  async renderFollowedActors() {
+    const followedActors = await db.getFollowedActors();
+    this.innerHTML = followedActors.map(actor => {
+      const formattedDate = this.formatDate(actor.followedAt);
+      return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`;
+    }).join('');
+  }
+
+  formatDate(dateString) {
+    const options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
+    };
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", options);
+  }
 }
 
-async function displayFollowedActors() {
-  const followedListElement = document.getElementById("followedList");
-  const followedActors = await db.getFollowedActors();
-  console.log(followedActors);
-
-  followedActors.forEach((actor) => {
-    const actorElement = document.createElement("div");
-    const formattedDate = formatDate(actor.followedAt);
-    actorElement.textContent = `- Followed URL: ${actor.url} - Followed At: ${formattedDate}`;
-    followedListElement.appendChild(actorElement);
-  });
-}
-displayFollowedActors();
+customElements.define("followed-actors-list", FollowedActorsList);
 
 export async function updateFollowCount() {
   const followCountElement = document.getElementById("followCount");
