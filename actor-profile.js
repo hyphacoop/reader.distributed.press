@@ -1,5 +1,4 @@
 import { db } from "./dbInstance.js";
-import { fetchActorInfo } from "./post.js";
 
 class ActorProfile extends HTMLElement {
   static get observedAttributes() {
@@ -17,7 +16,7 @@ class ActorProfile extends HTMLElement {
   }
 
   async fetchAndRenderActorProfile(url) {
-    const actorInfo = await fetchActorInfo(url);
+    const actorInfo = await db.getActor(url);
     console.log(actorInfo);
     if (actorInfo) {
       this.renderActorProfile(actorInfo);
