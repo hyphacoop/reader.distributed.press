@@ -84,6 +84,7 @@ class ActorProfile extends HTMLElement {
       "url",
       actorInfo.outbox
     );
+    this.dispatchEvent(new CustomEvent('outboxUpdated', { bubbles: true }));
   }
 }
 
