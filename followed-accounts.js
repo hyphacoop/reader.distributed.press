@@ -11,10 +11,12 @@ class FollowedActorsList extends HTMLElement {
 
   async renderFollowedActors() {
     const followedActors = await db.getFollowedActors();
-    this.innerHTML = followedActors.map(actor => {
-      const formattedDate = this.formatDate(actor.followedAt);
-      return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`;
-    }).join('');
+    this.innerHTML = followedActors
+      .map((actor) => {
+        const formattedDate = this.formatDate(actor.followedAt);
+        return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`;
+      })
+      .join("");
   }
 
   formatDate(dateString) {
@@ -34,11 +36,22 @@ class FollowedActorsList extends HTMLElement {
 
 customElements.define("followed-actors-list", FollowedActorsList);
 
-export async function updateFollowCount() {
-  const followCountElement = document.getElementById("followCount");
-  const followedActors = await db.getFollowedActors();
-  followCountElement.textContent = followedActors.length;
+class FollowedCount extends HTMLElement {
+  connectedCallback() {
+    this.updateCountOnLoad();
+  }
+
+  async updateCountOnLoad() {
+    setTimeout(() => this.updateCount(), 100);
+  }
+
+  async updateCount() {
+    const followedActors = await db.getFollowedActors();
+    this.textContent = followedActors.length;
+  }
 }
+
+customElements.define("followed-count", FollowedCount);
 
 // test following/unfollowing
 // (async () => {

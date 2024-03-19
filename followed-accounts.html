@@ -8,14 +8,11 @@
 </style>
 <div class="followed-container">
   <p>
-    You're following <span id="followCount">0</span> accounts.<br /><span
+    You're following
+    <followed-count id="followCount"></followed-count> accounts.<br /><span
       >Import and export followed list coming soon..</span
     >
   </p>
   <followed-actors-list></followed-actors-list>
 </div>
-<script type="module">
-  import { updateFollowCount } from "./followed-accounts.js";
-  updateFollowCount();
-</script>
 <script type="module" src="followed-accounts.js"></script>

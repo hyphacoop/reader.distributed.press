@@ -13,8 +13,8 @@
     <h1>Social Reader</h1>
     <div class="controls">
       <a href="./followed-accounts.html"
-        >Following · <span id="followCount">0</span></a
-      >
+        >Following · <followed-count></followed-count
+      ></a>
     </div>
     <nav>
       <a href="https://github.com/hyphacoop/reader.distributed.press">GitHub</a>
@@ -26,10 +26,6 @@
   </div>
   <reader-timeline></reader-timeline>
 </div>
-<script type="module">
-  import { updateFollowCount } from "./followed-accounts.js";
-  updateFollowCount();
-</script>
 <script type="module" src="./dbInstance.js"></script>
 <script type="module" src="./timeline.js"></script>
 <script type="module" src="./outbox.js"></script>
