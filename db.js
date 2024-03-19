@@ -4,7 +4,7 @@ export const DEFAULT_DB = 'default'
 export const ACTORS_STORE = 'actors'
 export const NOTES_STORE = 'notes'
 export const ACTIVITIES_STORE = 'activities'
-export const FOLLOWED_ACTORS_STORE = 'followedActors';
+export const FOLLOWED_ACTORS_STORE = 'followedActors'
 
 export const ID_FIELD = 'id'
 export const URL_FIELD = 'url'
@@ -176,7 +176,7 @@ export class ActivityPubDB {
 
     for (const itemOrUrl of items) {
       const activity = await this.#get(itemOrUrl)
-      
+
       if (activity) {
         yield activity
       }
@@ -213,9 +213,9 @@ export class ActivityPubDB {
         note = activity.object
       }
       if (note.type === TYPE_NOTE) {
-        note.id = activity.id; // Use the Create activity's ID for the note ID
-        console.log("Ingesting note:", note);
-        await this.ingestNote(note);
+        note.id = activity.id // Use the Create activity's ID for the note ID
+        console.log('Ingesting note:', note)
+        await this.ingestNote(note)
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
@@ -223,25 +223,25 @@ export class ActivityPubDB {
     }
   }
 
-  async ingestNote(note) {
+  async ingestNote (note) {
     // Convert needed fields to date
-    note.published = new Date(note.published);
+    note.published = new Date(note.published)
     // Add tag_names field
-    note.tag_names = (note.tags || []).map(({ name }) => name);
+    note.tag_names = (note.tags || []).map(({ name }) => name)
     // Try to retrieve an existing note from the database
-    const existingNote = await this.db.get(NOTES_STORE, note.id);
+    const existingNote = await this.db.get(NOTES_STORE, note.id)
     // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
-      console.log(`Updating note with newer version: ${note.id}`);
-      await this.db.put(NOTES_STORE, note);
+      console.log(`Updating note with newer version: ${note.id}`)
+      await this.db.put(NOTES_STORE, note)
     } else if (!existingNote) {
       // If no existing note, just add the new note
-      console.log(`Adding new note: ${note.id}`);
-      await this.db.put(NOTES_STORE, note);
+      console.log(`Adding new note: ${note.id}`)
+      await this.db.put(NOTES_STORE, note)
     }
     // If the existing note is newer, do not replace it
     // TODO: Loop through replies
-  }  
+  }
 
   async deleteNote (url) {
     // delete note using the url as the `id` from the notes store
@@ -249,43 +249,43 @@ export class ActivityPubDB {
   }
 
   // Method to follow an actor
-  async followActor(url) {
-    const followedAt = new Date();
-    await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt });
-    console.log(`Followed actor: ${url} at ${followedAt}`);
+  async followActor (url) {
+    const followedAt = new Date()
+    await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt })
+    console.log(`Followed actor: ${url} at ${followedAt}`)
   }
 
   // Method to unfollow an actor
-  async unfollowActor(url) {
-    await this.db.delete(FOLLOWED_ACTORS_STORE, url);
-    console.log(`Unfollowed actor: ${url}`);
+  async unfollowActor (url) {
+    await this.db.delete(FOLLOWED_ACTORS_STORE, url)
+    console.log(`Unfollowed actor: ${url}`)
   }
 
   // Method to retrieve all followed actors
-  async getFollowedActors() {
-    const tx = this.db.transaction(FOLLOWED_ACTORS_STORE, 'readonly');
-    const store = tx.objectStore(FOLLOWED_ACTORS_STORE);
-    const followedActors = [];
+  async getFollowedActors () {
+    const tx = this.db.transaction(FOLLOWED_ACTORS_STORE, 'readonly')
+    const store = tx.objectStore(FOLLOWED_ACTORS_STORE)
+    const followedActors = []
     for await (const cursor of store) {
-      followedActors.push(cursor.value);
+      followedActors.push(cursor.value)
     }
-    return followedActors;
+    return followedActors
   }
 
   // Method to check if an actor is followed
-  async isActorFollowed(url) {
+  async isActorFollowed (url) {
     try {
-      const record = await this.db.get(FOLLOWED_ACTORS_STORE, url);
-      return !!record; // Convert the record to a boolean indicating if the actor is followed
+      const record = await this.db.get(FOLLOWED_ACTORS_STORE, url)
+      return !!record // Convert the record to a boolean indicating if the actor is followed
     } catch (error) {
-      console.error(`Error checking if actor is followed: ${url}`, error);
-      return false; // Assume not followed if there's an error
+      console.error(`Error checking if actor is followed: ${url}`, error)
+      return false // Assume not followed if there's an error
     }
   }
 
-  async hasFollowedActors() {
-    const followedActors = await this.getFollowedActors();
-    return followedActors.length > 0;
+  async hasFollowedActors () {
+    const followedActors = await this.getFollowedActors()
+    return followedActors.length > 0
   }
 }
 
@@ -300,8 +300,8 @@ function upgrade (db) {
   actors.createIndex(URL_FIELD, URL_FIELD)
 
   db.createObjectStore(FOLLOWED_ACTORS_STORE, {
-    keyPath: "url",
-  });
+    keyPath: 'url'
+  })
 
   const notes = db.createObjectStore(NOTES_STORE, {
     keyPath: 'id',

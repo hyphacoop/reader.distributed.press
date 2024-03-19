@@ -1,57 +1,57 @@
-import { db } from "./dbInstance.js";
+import { db } from './dbInstance.js'
 
 class FollowedActorsList extends HTMLElement {
-  constructor() {
-    super();
+  constructor () {
+    super()
   }
 
-  connectedCallback() {
-    this.renderFollowedActors();
+  connectedCallback () {
+    this.renderFollowedActors()
   }
 
-  async renderFollowedActors() {
-    const followedActors = await db.getFollowedActors();
+  async renderFollowedActors () {
+    const followedActors = await db.getFollowedActors()
     this.innerHTML = followedActors
       .map((actor) => {
-        const formattedDate = this.formatDate(actor.followedAt);
-        return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`;
+        const formattedDate = this.formatDate(actor.followedAt)
+        return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`
       })
-      .join("");
+      .join('')
   }
 
-  formatDate(dateString) {
+  formatDate (dateString) {
     const options = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZoneName: "short",
-    };
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", options);
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short'
+    }
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', options)
   }
 }
 
-customElements.define("followed-actors-list", FollowedActorsList);
+customElements.define('followed-actors-list', FollowedActorsList)
 
 class FollowedCount extends HTMLElement {
-  connectedCallback() {
-    this.updateCountOnLoad();
+  connectedCallback () {
+    this.updateCountOnLoad()
   }
 
-  async updateCountOnLoad() {
-    setTimeout(() => this.updateCount(), 100);
+  async updateCountOnLoad () {
+    setTimeout(() => this.updateCount(), 100)
   }
 
-  async updateCount() {
-    const followedActors = await db.getFollowedActors();
-    this.textContent = followedActors.length;
+  async updateCount () {
+    const followedActors = await db.getFollowedActors()
+    this.textContent = followedActors.length
   }
 }
 
-customElements.define("followed-count", FollowedCount);
+customElements.define('followed-count', FollowedCount)
 
 // test following/unfollowing
 // (async () => {
