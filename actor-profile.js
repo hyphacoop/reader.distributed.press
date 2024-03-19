@@ -57,13 +57,13 @@ class ActorProfile extends HTMLElement {
       actorContainer.appendChild(pName); // Append to the actor container
     }
 
-    // Append the actor container to the profile container
-    profileContainer.appendChild(actorContainer);
-
     // Instead of creating a button, create a FollowButton component
     const followButton = document.createElement("follow-button");
     followButton.setAttribute("url", this.url);
-    profileContainer.appendChild(followButton);
+    actorContainer.appendChild(followButton);
+
+    // Append the actor container to the profile container
+    profileContainer.appendChild(actorContainer);
 
     // Create the distributed-outbox component and append it to the profile container
     const distributedOutbox = document.createElement("distributed-outbox");
