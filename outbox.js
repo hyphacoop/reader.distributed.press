@@ -2,7 +2,7 @@ class DistributedOutbox extends HTMLElement {
   constructor() {
     super();
     this.renderedItems = new Map(); // Tracks rendered items by ID
-    this.numPosts = 1; // Default value
+    this.numPosts = 32; // Default value
     this.page = 1; // Default value
     this.totalPages = 0; // Keep track of total pages
   }

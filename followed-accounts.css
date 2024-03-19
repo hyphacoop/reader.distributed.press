@@ -10,7 +10,7 @@ html {
   margin-top: 20px;
 }
 
-#followedList {
+followed-actors-list {
   text-align: left;
   color: var(--rdp-text-color);
   width: 80%;
