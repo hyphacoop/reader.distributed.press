@@ -11,12 +11,15 @@ class FollowedActorsList extends HTMLElement {
 
   async renderFollowedActors () {
     const followedActors = await db.getFollowedActors()
-    this.innerHTML = followedActors
-      .map((actor) => {
-        const formattedDate = this.formatDate(actor.followedAt)
-        return `<div>- Followed URL: ${actor.url} - Followed At: ${formattedDate}</div>`
-      })
-      .join('')
+    this.innerHTML = ''
+    followedActors.forEach(actor => {
+      const actorElement = document.createElement('div')
+      const formattedDate = this.formatDate(actor.followedAt)
+
+      actorElement.innerText = `- Followed URL: ${actor.url} - Followed At: ${formattedDate}`
+
+      this.appendChild(actorElement)
+    })
   }
 
   formatDate (dateString) {
