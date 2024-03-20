@@ -57,7 +57,7 @@ body {
 }
 
 .sidebar nav a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 reader-timeline {

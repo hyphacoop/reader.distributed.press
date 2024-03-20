@@ -1,0 +1,23 @@
+html {
+  background: var(--bg-color);
+  font-family: var(--rdp-font);
+}
+
+.container {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.about {
+  text-align: left;
+  color: var(--rdp-text-color);
+  width: 80%;
+}
+
+.about a {
+  color: var(--rdp-details-color);
+  text-decoration: underline;
+}
+.about a:hover {
+  text-decoration: none;
+}
