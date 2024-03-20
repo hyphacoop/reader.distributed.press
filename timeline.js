@@ -9,7 +9,7 @@ class ReaderTimeline extends HTMLElement {
 
   async initializeDefaultFollowedActors () {
     const defaultActors = [
-      'https://social.dp.chanterelle.xyz/v1/@announcements@social.dp.chanterelle.xyz/',
+      'https://social.distributed.press/v1/@announcements@social.distributed.press/',
       'https://hypha.coop/about.jsonld',
       'https://sutty.nl/about.jsonld'
       // "https://akhilesh.sutty.nl/about.jsonld",
