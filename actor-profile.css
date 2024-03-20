@@ -35,7 +35,16 @@
 .profile-username {
   color: var(--rdp-text-color);
   margin-top: 1px;
+}
+
+.profile-summary {
+  color: var(--rdp-details-color);
+  width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 8px;
   margin-bottom: 10px;
+  overflow-wrap: break-word;
 }
 
 follow-button {
@@ -76,4 +85,10 @@ follow-button[state="unfollow"] {
 }
 follow-button[state="unfollow"]:hover {
   background-color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .profile-summary {
+    width: 100%;
+  }
 }

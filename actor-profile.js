@@ -64,6 +64,13 @@ class ActorProfile extends HTMLElement {
       actorContainer.appendChild(pUserName) // Append to the actor container
     }
 
+    if (actorInfo.summary) {
+      const pUserSummary = document.createElement('div')
+      pUserSummary.classList.add('profile-summary')
+      pUserSummary.textContent = `${actorInfo.summary}`
+      actorContainer.appendChild(pUserSummary) // Append to the actor container
+    }
+
     // Instead of creating a button, create a FollowButton component
     const followButton = document.createElement('follow-button')
     followButton.setAttribute('url', this.url)

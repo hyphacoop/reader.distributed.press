@@ -1,6 +1,10 @@
 import { db } from './dbInstance.js'
 
 class FollowedActorsList extends HTMLElement {
+  constructor () {
+    super()
+  }
+
   connectedCallback () {
     this.renderFollowedActors()
   }
