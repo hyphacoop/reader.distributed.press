@@ -1,11 +1,8 @@
 import { db } from './dbInstance.js'
 
-class ReaderTimeline extends HTMLElement {
-  constructor () {
-    super()
-    this.processedNotes = new Set() // To keep track of already processed notes
-  }
+let hasLoaded = false
 
+class ReaderTimeline extends HTMLElement {
   connectedCallback () {
     this.initializeDefaultFollowedActors().then(() => this.initTimeline())
   }
@@ -31,36 +28,24 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline () {
+    // Todo: Use filters from attributes
+    // TODO: Use async iterator to render
+    const allNotes = await db.searchNotes({})
     this.innerHTML = '' // Clear existing content
 
-    // Dynamically load followed actors
-    const followedActors = await db.getFollowedActors()
-    const actorUrls = followedActors.map((actor) => actor.url)
-
-    for (const actorUrl of actorUrls) {
-      try {
-        console.log('Loading actor:', actorUrl)
-        await db.ingestActor(actorUrl)
-      } catch (error) {
-        console.error(`Error loading actor ${actorUrl}:`, error)
-      }
+    for (const note of allNotes) {
+      const activityElement = document.createElement('distributed-post')
+      activityElement.setAttribute('url', note.id)
+      this.appendChild(activityElement)
     }
 
-    // After ingesting all actors, search for all notes once
-    try {
-      const allNotes = await db.searchNotes({})
-      allNotes.sort((a, b) => new Date(b.published) - new Date(a.published))
+    if (!hasLoaded) {
+      hasLoaded = true
+      // Dynamically load followed actors
+      const followedActors = await db.getFollowedActors()
 
-      allNotes.forEach((note) => {
-        if (!this.processedNotes.has(note.id)) {
-          const activityElement = document.createElement('distributed-post')
-          activityElement.setAttribute('url', note.id)
-          this.appendChild(activityElement)
-          this.processedNotes.add(note.id) // Mark this note as processed
-        }
-      })
-    } catch (error) {
-      console.error('Error retrieving notes:', error)
+      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+      await this.initTimeline()
     }
   }
 }

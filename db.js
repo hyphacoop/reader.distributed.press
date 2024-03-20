@@ -1,3 +1,4 @@
+/* globals DOMParser */
 import { openDB } from './dependencies/idb/index.js'
 
 export const DEFAULT_DB = 'default'
@@ -179,7 +180,7 @@ export class ActivityPubDB {
   async getNote (url) {
     try {
       const note = await this.db.get(NOTES_STORE, url)
-      if(!note) throw new Error('Not loaded')
+      if (!note) throw new Error('Not loaded')
       return note
     } catch {
       const note = await this.#get(url)
@@ -257,12 +258,17 @@ export class ActivityPubDB {
       collectionOrUrl
     )
 
-    for await (const activity of this.iterateCollection(collectionOrUrl)) {
-      await this.ingestActivity(activity, actorId)
+    for await (const activity of this.iterateCollection(collectionOrUrl, { limit: Infinity })) {
+      // Assume newest items will be first
+      const wasNew = await this.ingestActivity(activity, actorId)
+      if (!wasNew) {
+        console.log('Caught up with', actorId || collectionOrUrl)
+        break
+      }
     }
   }
 
-  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32, resolve = true } = {}) {
+  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32 } = {}) {
     const collection = await this.#get(collectionOrUrl)
 
     // TODO: handle pagination here, if collection contains a 'next' or 'first' link.
@@ -328,6 +334,9 @@ export class ActivityPubDB {
       }
     }
 
+    const existing = await this.db.get(ACTIVITIES_STORE, activity.id)
+    if (existing) return false
+
     // Convert the published date to a Date object
     activity.published = new Date(activity.published)
 
@@ -351,6 +360,8 @@ export class ActivityPubDB {
       // Handle 'Delete' activity type
       await this.deleteNote(activity.object)
     }
+
+    return true
   }
 
   async ingestNote (note) {

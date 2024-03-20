@@ -121,9 +121,8 @@ class DistributedActivity extends HTMLElement {
       this.activityType = this.type
       this.activityData = this.data
       this.renderActivity()
-    }
+    } else if (this.activityUrl) {
     // Load from URL if type and data are not set
-    else if (this.activityUrl) {
       await this.loadDataFromUrl(this.activityUrl)
     } else {
       console.error('Activity data is not provided and no URL is specified.')
@@ -168,6 +167,13 @@ class DistributedActivity extends HTMLElement {
     this.appendChild(distributedPostElement)
   }
 
+  displayUnimplemented () {
+    const message = `Activity type ${this.activityType} is not implemented yet.`
+    const messageElement = document.createElement('p')
+    messageElement.textContent = message
+    this.appendChild(messageElement)
+  }
+
   renderActivity () {
     // Clear existing content
     this.innerHTML = ''
@@ -190,10 +196,7 @@ class DistributedActivity extends HTMLElement {
         this.displayLikeActivity()
         break
       default:
-        const message = `Activity type ${this.activityType} is not implemented yet.`
-        const messageElement = document.createElement('p')
-        messageElement.textContent = message
-        this.appendChild(messageElement)
+        this.displayUnimplemented()
         break
     }
   }
