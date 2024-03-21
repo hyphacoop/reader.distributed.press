@@ -399,7 +399,41 @@ export class ActivityPubDB {
   // Method to unfollow an actor
   async unfollowActor (url) {
     await this.db.delete(FOLLOWED_ACTORS_STORE, url)
-    console.log(`Unfollowed actor: ${url}`)
+    await this.purgeActor(url)
+    console.log(`Unfollowed and purged actor: ${url}`)
+  }
+
+  async purgeActor (url) {
+    // First, remove the actor from the ACTORS_STORE
+    const actor = await this.getActor(url)
+    if (actor) {
+      await this.db.delete(ACTORS_STORE, actor.id)
+      console.log(`Removed actor: ${url}`)
+    }
+
+    // Remove all activities related to this actor from the ACTIVITIES_STORE using async iteration
+    const activitiesTx = this.db.transaction(ACTIVITIES_STORE, 'readwrite')
+    const activitiesStore = activitiesTx.objectStore(ACTIVITIES_STORE)
+    const activitiesIndex = activitiesStore.index(ACTOR_FIELD)
+
+    for await (const cursor of activitiesIndex.iterate(actor.id)) {
+      await activitiesStore.delete(cursor.primaryKey)
+    }
+
+    await activitiesTx.done
+    console.log(`Removed all activities related to actor: ${url}`)
+
+    // Additionally, remove notes associated with the actor's activities using async iteration
+    const notesTx = this.db.transaction(NOTES_STORE, 'readwrite')
+    const notesStore = notesTx.objectStore(NOTES_STORE)
+    const notesIndex = notesStore.index(ATTRIBUTED_TO_FIELD)
+
+    for await (const cursor of notesIndex.iterate(actor.id)) {
+      await notesStore.delete(cursor.primaryKey)
+    }
+
+    await notesTx.done
+    console.log(`Removed all notes related to actor: ${url}`)
   }
 
   // Method to retrieve all followed actors
@@ -448,7 +482,7 @@ function upgrade (db) {
     keyPath: 'id',
     autoIncrement: false
   })
-
+  notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
   addRegularIndex(notes, TO_FIELD)
   addRegularIndex(notes, URL_FIELD)
   addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
@@ -461,6 +495,7 @@ function upgrade (db) {
     keyPath: 'id',
     autoIncrement: false
   })
+  activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
   addSortedIndex(activities, ACTOR_FIELD)
   addSortedIndex(activities, TO_FIELD)
   addRegularIndex(activities, PUBLISHED_FIELD)
