@@ -3,21 +3,32 @@ html {
   font-family: var(--rdp-font);
 }
 
-.container {
-  text-align: center;
-  margin-top: 40px;
+.about-container {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+  margin-top: 10px;
 }
 
-.about {
+.about-info {
   text-align: left;
   color: var(--rdp-text-color);
-  width: 80%;
+  width: 100%;
 }
 
-.about a {
+.about-info a {
   color: var(--rdp-details-color);
   text-decoration: underline;
 }
-.about a:hover {
+.about-info a:hover {
   text-decoration: none;
+}
+
+@media screen and (max-width: 768px) {
+  .about-container {
+    width: 80%;
+    margin-top: 130px;
+    max-width: 100%;
+  }
 }

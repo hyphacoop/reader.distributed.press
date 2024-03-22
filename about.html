@@ -5,32 +5,52 @@
 <style>
   @import url("./about.css");
   @import url("./index.css");
-  @import url("./post.css");
   @import url("./timeline.css");
+  @import url("./post.css");
 </style>
 <div class="container">
-  <div class="about">
-    <p>
-      Social Reader is a P2P and offline ActivityPub client for reading and
-      following microblogs on the Fediverse.
-    </p>
-    <p>
-      Unlike traditional platforms, Social Reader does not index data on a
-      server. It empowers you to load public ActivityPub data directly, turning
-      your device into a personal indexer. This means
-      <b>your content, your control</b>.
-    </p>
-    <p>
-      Social Reader natively supports content loading over P2P protocols such as
-      <code>ipfs://</code> and <code>hyper://</code>. This innovation bypasses
-      the need for always-online HTTP servers, allowing you to access content
-      anytime, anywhere—even offline.
-    </p>
-    <p>
-      Social Reader is made with minimal dependencies, view and contribute to
-      our code on
-      <a href="https://github.com/hyphacoop/reader.distributed.press">GitHub</a
-      >.
-    </p>
+  <div class="sidebar">
+    <h1>Social Reader</h1>
+    <div class="controls">
+      <a href="./followed-accounts.html"
+        >Following · <followed-count></followed-count
+      ></a>
+    </div>
+    <nav>
+      <a href="./index.html">Home</a>
+      <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+        >Social Inbox</a
+      >
+      <a href="https://distributed.press">Distributed Press</a>
+    </nav>
+  </div>
+  <div class="about-container">
+    <div class="about-info">
+      <p>
+        Social Reader is a P2P and offline ActivityPub client for reading and
+        following microblogs on the Fediverse.
+      </p>
+      <p>
+        Unlike traditional platforms, Social Reader does not index data on a
+        server. It empowers you to load public ActivityPub data directly,
+        turning your device into a personal indexer. This means
+        <b>your content, your control</b>.
+      </p>
+      <p>
+        Social Reader natively supports content loading over P2P protocols such
+        as
+        <code>ipfs://</code> and <code>hyper://</code>. This innovation bypasses
+        the need for always-online HTTP servers, allowing you to access content
+        anytime, anywhere—even offline.
+      </p>
+      <p>
+        Social Reader is made with minimal dependencies, view and contribute to
+        our code on
+        <a href="https://github.com/hyphacoop/reader.distributed.press"
+          >GitHub</a
+        >.
+      </p>
+    </div>
   </div>
 </div>
+<script type="module" src="followed-accounts.js"></script>
