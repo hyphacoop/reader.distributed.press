@@ -9,10 +9,46 @@
 <div class="followed-container">
   <p>
     You're following
-    <followed-count id="followCount"></followed-count> accounts.<br /><span
-      >Import and export followed list coming soon..</span
+    <b> <followed-count id="followCount"></followed-count> accounts </b>on the
+    fediverse.<br />
+    <span
+      >To sync your list of followed accounts across multiple devices, be sure
+      to ⬆️ export your followed list from one device and 📥 import it on the
+      other.</span
     >
   </p>
+  <div class="imp-exp-btn">
+    <button id="exportFollowedList">Export</button>
+    <button id="importFollowedList">Import</button>
+    <input type="file" id="fileInput" style="display: none" accept=".json" />
+  </div>
   <followed-actors-list></followed-actors-list>
+  <span class="cache-warning-msg"
+    >⚠️ Before clearing your browser's cache, ensure you export your followed
+    list.</span
+  >
 </div>
+<script>
+  document
+    .getElementById("exportFollowedList")
+    .addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("exportFollowed"));
+    });
+
+  document
+    .getElementById("importFollowedList")
+    .addEventListener("click", () => {
+      document.getElementById("fileInput").click();
+    });
+
+  document.getElementById("fileInput").addEventListener("change", function () {
+    if (this.files[0]) {
+      const event = new CustomEvent("importFollowed", {
+        detail: { file: this.files[0] },
+      });
+      window.dispatchEvent(event);
+      this.value = "";
+    }
+  });
+</script>
 <script type="module" src="followed-accounts.js"></script>

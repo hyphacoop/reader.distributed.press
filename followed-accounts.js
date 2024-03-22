@@ -7,12 +7,42 @@ class FollowedActorsList extends HTMLElement {
 
   connectedCallback () {
     this.renderFollowedActors()
+
+    window.addEventListener(
+      'exportFollowed',
+      FollowedActorsList.exportFollowedList
+    )
+
+    window.addEventListener('importFollowed', (e) => {
+      FollowedActorsList.importFollowedList(e.detail.file)
+    })
+
+    // Listen for the custom event to refresh the list and count
+    window.addEventListener('followedActorsUpdated', async () => {
+      await this.renderFollowedActors()
+      document.getElementById('followCount').updateCountOnLoad()
+    })
+  }
+
+  disconnectedCallback () {
+    window.removeEventListener(
+      'exportFollowed',
+      FollowedActorsList.exportFollowedList
+    )
+    window.removeEventListener(
+      'importFollowed',
+      FollowedActorsList.importFollowedList
+    )
+    window.removeEventListener(
+      'followedActorsUpdated',
+      this.renderFollowedActors
+    )
   }
 
   async renderFollowedActors () {
     const followedActors = await db.getFollowedActors()
     this.innerHTML = ''
-    followedActors.forEach(actor => {
+    followedActors.forEach((actor) => {
       const actorElement = document.createElement('div')
       const formattedDate = this.formatDate(actor.followedAt)
 
@@ -34,6 +64,36 @@ class FollowedActorsList extends HTMLElement {
     }
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', options)
+  }
+
+  static async exportFollowedList () {
+    const followedActors = await db.getFollowedActors()
+    const blob = new Blob([JSON.stringify(followedActors, null, 2)], {
+      type: 'application/json'
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'reader-followed-accounts.json'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  static async importFollowedList (file) {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const followedActors = JSON.parse(e.target.result)
+      for (const actor of followedActors) {
+        if (!(await db.isActorFollowed(actor.url))) {
+          await db.followActor(actor.url)
+        }
+      }
+      // After import, dispatch a custom event to notify the component
+      window.dispatchEvent(new CustomEvent('followedActorsUpdated'))
+    }
+    reader.readAsText(file)
   }
 }
 
