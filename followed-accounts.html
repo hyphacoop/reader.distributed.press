@@ -4,19 +4,21 @@
 <title>Followed Accounts</title>
 <style>
   @import url("./followed-accounts.css");
+  @import url("./theme.css");
   @import url("./index.css");
   @import url("./timeline.css");
   @import url("./post.css");
 </style>
 <div class="container">
   <div class="sidebar">
-    <h1>Social Reader</h1>
+    <h1 class="header-branding">Social Reader</h1>
     <div class="controls">
       <a href="./followed-accounts.html"
         >Following · <followed-count></followed-count
       ></a>
     </div>
     <nav>
+      <theme-selector></theme-selector>
       <a href="./index.html">Home</a>
       <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
         >Social Inbox</a
@@ -71,3 +73,4 @@
   });
 </script>
 <script type="module" src="followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>

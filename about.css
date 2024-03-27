@@ -28,7 +28,7 @@ html {
 @media screen and (max-width: 768px) {
   .about-container {
     width: 80%;
-    margin-top: 130px;
     max-width: 100%;
+    margin-top: 150px;
   }
 }

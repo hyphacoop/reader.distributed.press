@@ -3,6 +3,7 @@
   --rdp-font: "Arial", sans-serif;
   --rdp-bg-color: #ebf3f5;
   --rdp-text-color: #000000;
+  --rdp-link-color: #0ea5e9;
   --rdp-details-color: #4d626a;
   --rdp-border-color: #cccccc;
   --rdp-border-radius: 6px;
@@ -91,6 +92,14 @@ summary {
   padding: 6px;
   margin-bottom: 16px;
   overflow-wrap: break-word;
+}
+
+.post-content a{
+  color: var(--rdp-link-color);
+  text-decoration: underline;
+}
+.post-content a:hover{
+  text-decoration: none;
 }
 
 .post-footer {

@@ -19,6 +19,11 @@ html {
   margin-bottom: 20px;
 }
 
+#exportFollowedList,
+#importFollowedList {
+  cursor: pointer;
+}
+
 .cache-warning-msg {
   font-size: 0.775em;
   margin-top: 10px;
@@ -37,6 +42,6 @@ followed-actors-list {
   .followed-container {
     width: 80%;
     max-width: 100%;
-    margin-top: 130px;
+    margin-top: 150px;
   }
 }

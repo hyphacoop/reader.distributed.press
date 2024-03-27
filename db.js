@@ -462,6 +462,15 @@ export class ActivityPubDB {
     const followedActors = await this.getFollowedActors()
     return followedActors.length > 0
   }
+
+  async setTheme (themeName) {
+    await this.db.put('settings', { key: 'theme', value: themeName })
+  }
+
+  async getTheme () {
+    const themeSetting = await this.db.get('settings', 'theme')
+    return themeSetting ? themeSetting.value : null
+  }
 }
 
 function upgrade (db) {
@@ -506,6 +515,8 @@ function upgrade (db) {
   function addSortedIndex (store, field, options = {}) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
+
+  db.createObjectStore('settings', { keyPath: 'key' })
 }
 
 async function parsePostHtml (htmlContent) {

@@ -17,6 +17,10 @@ body {
   margin-top: 20px;
 }
 
+.header-branding {
+  color: var(--rdp-text-color);
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -30,12 +34,8 @@ body {
   margin-bottom: 0.6em;
 }
 
-.controls {
-  margin-bottom: 0.4em;
-}
-
 .controls a {
-  color: var(--rdp-details-color);
+  color: var(--rdp-text-color);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: bold;
@@ -97,6 +97,6 @@ reader-timeline {
   reader-timeline {
     width: 100%;
     max-width: 100%;
-    margin-top: 130px;
+    margin-top: 150px;
   }
 }
