@@ -48,7 +48,7 @@ export class ActivityPubDB {
   }
 
   static async load (name = DEFAULT_DB, fetch = globalThis.fetch) {
-    const db = await openDB(name, 1, {
+    const db = await openDB(name, 2, {
       upgrade
     })
 
