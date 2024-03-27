@@ -87,8 +87,21 @@ follow-button[state="unfollow"]:hover {
   background-color: #dc2626;
 }
 
+.actor-profile {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+}
+
 @media (max-width: 768px) {
   .profile-summary {
     width: 100%;
+  }
+
+  .actor-profile {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 150px;
   }
 }

@@ -4,14 +4,37 @@
 <title>User Profile</title>
 <style>
   @import url("./actor-profile.css");
+  @import url("./index.css");
+  @import url("./theme.css");
+  @import url("./timeline.css");
   @import url("./outbox.css");
   @import url("./post.css");
 </style>
-<actor-profile></actor-profile>
-<distributed-outbox></distributed-outbox>
-<div class="pagination-controls">
-  <button id="prevPage">< Prev</button>
-  <button id="nextPage">Next ></button>
+<div class="container">
+  <div class="sidebar">
+    <h1 class="header-branding">Social Reader</h1>
+    <div class="controls">
+      <a href="./followed-accounts.html"
+        >Following · <followed-count></followed-count
+      ></a>
+    </div>
+    <nav>
+      <theme-selector></theme-selector>
+      <a href="./index.html">Home</a>
+      <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+        >Social Inbox</a
+      >
+      <a href="https://distributed.press">Distributed Press</a>
+    </nav>
+  </div>
+  <div class="actor-profile">
+    <actor-profile></actor-profile>
+    <distributed-outbox></distributed-outbox>
+    <div class="pagination-controls">
+      <button id="prevPage">< Prev</button>
+      <button id="nextPage">Next ></button>
+    </div>
+  </div>
 </div>
 <script>
   // Pagination controls
@@ -42,3 +65,5 @@
 <script type="module" src="./actor-profile.js"></script>
 <script type="module" src="./post.js"></script>
 <script type="module" src="./outbox.js"></script>
+<script type="module" src="./followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>
