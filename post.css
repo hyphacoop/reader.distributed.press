@@ -69,6 +69,21 @@ img {
   color: var(--rdp-details-color);
 }
 
+summary {
+  cursor: pointer;
+}
+
+.cw-summary {
+  color: #f87171;
+}
+
+.see-more-toggle {
+  color: var(--rdp-details-color);
+  font-size: 0.725em;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
 .post-content {
   font-size: 16px;
   color: var(--rdp-text-color);

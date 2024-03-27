@@ -121,16 +121,43 @@ class DistributedPost extends HTMLElement {
       jsonLdData.sensitive ||
       (jsonLdData.object && jsonLdData.object.sensitive)
 
+    const summary =
+      jsonLdData.summary ||
+      (jsonLdData.object && jsonLdData.object.summary)
+
     // Handle sensitive content
     if (isSensitive) {
       const details = document.createElement('details')
       const summary = document.createElement('summary')
+      summary.classList.add('cw-summary')
       summary.textContent = 'Sensitive Content (click to view)'
       details.appendChild(summary)
       const content = document.createElement('p')
       content.innerHTML = DOMPurify.sanitize(contentSource)
       details.appendChild(content)
       postContent.appendChild(details)
+    } else if (summary) {
+      // Non-sensitive content with a summary (post title)
+      const details = document.createElement('details')
+      const summaryElement = document.createElement('summary')
+      summaryElement.textContent = summary // Post title goes here
+      details.appendChild(summaryElement)
+
+      // Adding the "Show more" and "Show less" toggle text
+      const toggleText = document.createElement('span')
+      toggleText.textContent = 'Show more'
+      toggleText.classList.add('see-more-toggle')
+      summaryElement.appendChild(toggleText)
+
+      const contentElement = document.createElement('p')
+      contentElement.innerHTML = DOMPurify.sanitize(jsonLdData.content)
+      details.appendChild(contentElement)
+      postContent.appendChild(details)
+
+      // Event listener to toggle the text of the Show more/Show less element
+      details.addEventListener('toggle', function () {
+        toggleText.textContent = details.open ? 'Show less' : 'Show more'
+      })
     } else {
       const content = document.createElement('p')
       content.innerHTML = DOMPurify.sanitize(contentSource)
