@@ -13,7 +13,8 @@ html {
   font-family: var(--rdp-font);
 }
 
-img {
+img,
+video {
   max-width: 100%;
 }
 
