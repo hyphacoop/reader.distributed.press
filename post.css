@@ -3,6 +3,7 @@
   --rdp-font: "Arial", sans-serif;
   --rdp-bg-color: #ebf3f5;
   --rdp-text-color: #000000;
+  --rdp-cw-color: #f87171;
   --rdp-link-color: #0ea5e9;
   --rdp-details-color: #4d626a;
   --rdp-border-color: #cccccc;
@@ -76,7 +77,7 @@ summary {
 }
 
 .cw-summary {
-  color: #f87171;
+  color: var(--rdp-cw-color);
 }
 
 .see-more-toggle {
