@@ -1,9 +1,11 @@
+/* globals DOMParser */
 import { openDB } from './dependencies/idb/index.js'
 
 export const DEFAULT_DB = 'default'
 export const ACTORS_STORE = 'actors'
 export const NOTES_STORE = 'notes'
 export const ACTIVITIES_STORE = 'activities'
+export const FOLLOWED_ACTORS_STORE = 'followedActors'
 
 export const ID_FIELD = 'id'
 export const URL_FIELD = 'url'
@@ -25,9 +27,19 @@ export const TYPE_UPDATE = 'Update'
 export const TYPE_NOTE = 'Note'
 export const TYPE_DELETE = 'Delete'
 
+export const HYPER_PREFIX = 'hyper://'
+export const IPNS_PREFIX = 'ipns://'
+
+const ACCEPT_HEADER =
+'application/activity+json, application/ld+json, application/json, text/html'
+
 // TODO: When ingesting notes and actors, wrap any dates in `new Date()`
 // TODO: When ingesting notes add a "tag_names" field which is just the names of the tag
 // TODO: When ingesting notes, also load their replies
+
+export function isP2P (url) {
+  return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
+}
 
 export class ActivityPubDB {
   constructor (db, fetch = globalThis.fetch) {
@@ -43,49 +55,107 @@ export class ActivityPubDB {
     return new ActivityPubDB(db, fetch)
   }
 
+  #fetch (...args) {
+    const { fetch } = this
+    return fetch(...args)
+  }
+
+  #gateWayFetch (url, options = {}) {
+    let gatewayUrl = url
+    // TODO: Don't hardcode the gateway
+    if (url.startsWith(HYPER_PREFIX)) {
+      gatewayUrl = url.replace(HYPER_PREFIX, 'https://hyper.hypha.coop/hyper/')
+    } else if (url.startsWith(IPNS_PREFIX)) {
+      gatewayUrl = url.replace(IPNS_PREFIX, 'https://ipfs.hypha.coop/ipns/')
+    }
+
+    return this.#fetch(gatewayUrl, options)
+  }
+
+  #proxiedFetch (url, options = {}) {
+    const proxiedURL = 'https://corsproxy.io/?' + encodeURIComponent(url)
+    return this.#fetch(proxiedURL, options)
+  }
+
   async #get (url) {
     if (url && typeof url === 'object') {
       return url
     }
 
+    /* TODO: Incorporate this logic
+
+    const headers = new Headers({ Accept: ACCEPT_HEADER });
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (
+      contentType.includes("application/ld+json") ||
+      contentType.includes("application/activity+json") ||
+      contentType.includes("application/json")
+    ) {
+      // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
+      return await response.json();
+    } else if (contentType.includes("text/html")) {
+      // For HTML responses, look for the link in the HTTP headers
+      const linkHeader = response.headers.get("Link");
+      if (linkHeader) {
+        const matches = linkHeader.match(
+          /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
+        );
+        if (matches && matches[1]) {
+          // Found JSON-LD link in headers, fetch that URL
+          return fetchJsonLd(matches[1]);
+        }
+      }
+      // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
+      const htmlContent = await response.text();
+      const jsonLdUrl = await parsePostHtml(htmlContent);
+      if (jsonLdUrl) {
+        // Found JSON-LD link in HTML, fetch that URL
+        return fetchJsonLd(jsonLdUrl);
+      }
+      // No JSON-LD link found in HTML
+      throw new Error("No JSON-LD link found in the response");
+    }
+    */
+
+    // TODO: Resolve html with link tags
+
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch
     try {
-      response = await this.fetch.call(globalThis, url, {
+      response = await this.#fetch(url, {
         headers: {
           Accept: 'application/json'
         }
       })
     } catch (error) {
-      console.error('P2P loading failed, trying HTTP gateway:', error)
-    }
-
-    // If direct fetch was not successful, attempt fetching from a gateway for P2P protocols
-    if (!response || !response.ok) {
-      let gatewayUrl = url
-
-      if (url.startsWith('hyper://')) {
-        gatewayUrl = url.replace('hyper://', 'https://hyper.hypha.coop/hyper/')
-      } else if (url.startsWith('ipns://')) {
-        gatewayUrl = url.replace('ipns://', 'https://ipfs.hypha.coop/ipns/')
-      }
-
-      try {
-        response = await this.fetch.call(globalThis, gatewayUrl, {
+      if (isP2P(url)) {
+        // Maybe the browser can't load p2p URLs
+        response = await this.#gateWayFetch(url, {
           headers: {
             Accept: 'application/json'
           }
         })
-      } catch (error) {
-        console.error('Fetching from gateway failed:', error)
-        throw new Error(`Failed to fetch ${url} from gateway`)
+      } else {
+        // Try the proxy, maybe it's cors?
+        response = await this.#proxiedFetch(url, {
+          headers: {
+            Accept: 'application/json'
+          }
+        })
       }
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
+      throw new Error(`HTTP error! Status: ${response.status}.\n${url}\n${await response.text()}`)
     }
+
     return await response.json()
   }
 
@@ -109,12 +179,43 @@ export class ActivityPubDB {
 
   async getNote (url) {
     try {
-      return this.db.get(NOTES_STORE, url)
+      const note = await this.db.get(NOTES_STORE, url)
+      if (!note) throw new Error('Not loaded')
+      return note
     } catch {
       const note = await this.#get(url)
       await this.ingestNote(note)
       return note
     }
+  }
+
+  async getActivity (url) {
+    try {
+      return this.db.get(ACTIVITIES_STORE, url)
+    } catch {
+      const activity = await this.#get(url)
+      await this.ingestActivity(activity)
+      return activity
+    }
+  }
+
+  async * searchActivities (actor, { limit = 32, skip = 0 } = {}) {
+    const indexName = ACTOR_FIELD + ', published'
+    const tx = this.db.transaction(ACTIVITIES_STORE, 'read')
+    const index = tx.store.index(indexName)
+
+    let count = 0
+
+    for await (const cursor of index.iterate(actor)) {
+      if (count === 0) {
+        cursor.advance(skip)
+      }
+      yield cursor.value
+      count++
+      if (count >= limit) break
+    }
+
+    await tx.done()
   }
 
   async searchNotes (criteria) {
@@ -157,27 +258,63 @@ export class ActivityPubDB {
       collectionOrUrl
     )
 
-    const collection = await this.#get(collectionOrUrl)
-
-    for await (const activity of this.iterateCollection(collection)) {
-      await this.ingestActivity(activity, actorId)
+    for await (const activity of this.iterateCollection(collectionOrUrl, { limit: Infinity })) {
+      // Assume newest items will be first
+      const wasNew = await this.ingestActivity(activity, actorId)
+      if (!wasNew) {
+        console.log('Caught up with', actorId || collectionOrUrl)
+        break
+      }
     }
   }
 
-  async * iterateCollection (collection) {
+  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32 } = {}) {
+    const collection = await this.#get(collectionOrUrl)
+
     // TODO: handle pagination here, if collection contains a 'next' or 'first' link.
     const items = collection.orderedItems || collection.items
 
-    if (!items) {
-      console.error('No items found in collection:', collection)
-      return // Exit if no items to iterate over
+    let toSkip = skip
+    let count = 0
+
+    if (items) {
+      for await (const item of this.#getAll(items)) {
+        if (toSkip) {
+          toSkip--
+        } else {
+          yield item
+          count++
+        }
+        if (count === limit) return
+      }
+
+      return
     }
 
+    // TODO: Error if no first page
+    let next = collection.first
+    while (next) {
+      const page = await this.#get(next)
+      next = page.next
+      const items = page.orderedItems || page.items
+      for await (const item of this.#getAll(items)) {
+        if (toSkip) {
+          toSkip--
+        } else {
+          yield item
+          count++
+        }
+        if (count === limit) return
+      }
+    }
+  }
+
+  async * #getAll (items) {
     for (const itemOrUrl of items) {
-      const activity = await this.#get(itemOrUrl)
-      
-      if (activity) {
-        yield activity
+      const item = await this.#get(itemOrUrl)
+
+      if (item) {
+        yield item
       }
     }
   }
@@ -197,6 +334,9 @@ export class ActivityPubDB {
       }
     }
 
+    const existing = await this.db.get(ACTIVITIES_STORE, activity.id)
+    if (existing) return false
+
     // Convert the published date to a Date object
     activity.published = new Date(activity.published)
 
@@ -212,39 +352,124 @@ export class ActivityPubDB {
         note = activity.object
       }
       if (note.type === TYPE_NOTE) {
-        note.id = activity.id; // Use the Create activity's ID for the note ID
-        console.log("Ingesting note:", note);
-        await this.ingestNote(note);
+        note.id = activity.id // Use the Create activity's ID for the note ID
+        console.log('Ingesting note:', note)
+        await this.ingestNote(note)
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
       await this.deleteNote(activity.object)
     }
+
+    return true
   }
 
-  async ingestNote(note) {
+  async ingestNote (note) {
     // Convert needed fields to date
-    note.published = new Date(note.published);
+    note.published = new Date(note.published)
     // Add tag_names field
-    note.tag_names = (note.tags || []).map(({ name }) => name);
+    note.tag_names = (note.tags || []).map(({ name }) => name)
     // Try to retrieve an existing note from the database
-    const existingNote = await this.db.get(NOTES_STORE, note.id);
+    const existingNote = await this.db.get(NOTES_STORE, note.id)
     // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
-      console.log(`Updating note with newer version: ${note.id}`);
-      await this.db.put(NOTES_STORE, note);
+      console.log(`Updating note with newer version: ${note.id}`)
+      await this.db.put(NOTES_STORE, note)
     } else if (!existingNote) {
       // If no existing note, just add the new note
-      console.log(`Adding new note: ${note.id}`);
-      await this.db.put(NOTES_STORE, note);
+      console.log(`Adding new note: ${note.id}`)
+      await this.db.put(NOTES_STORE, note)
     }
     // If the existing note is newer, do not replace it
     // TODO: Loop through replies
-  }  
+  }
 
   async deleteNote (url) {
     // delete note using the url as the `id` from the notes store
     this.db.delete(NOTES_STORE, url)
+  }
+
+  // Method to follow an actor
+  async followActor (url) {
+    const followedAt = new Date()
+    await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt })
+    console.log(`Followed actor: ${url} at ${followedAt}`)
+  }
+
+  // Method to unfollow an actor
+  async unfollowActor (url) {
+    await this.db.delete(FOLLOWED_ACTORS_STORE, url)
+    await this.purgeActor(url)
+    console.log(`Unfollowed and purged actor: ${url}`)
+  }
+
+  async purgeActor (url) {
+    // First, remove the actor from the ACTORS_STORE
+    const actor = await this.getActor(url)
+    if (actor) {
+      await this.db.delete(ACTORS_STORE, actor.id)
+      console.log(`Removed actor: ${url}`)
+    }
+
+    // Remove all activities related to this actor from the ACTIVITIES_STORE using async iteration
+    const activitiesTx = this.db.transaction(ACTIVITIES_STORE, 'readwrite')
+    const activitiesStore = activitiesTx.objectStore(ACTIVITIES_STORE)
+    const activitiesIndex = activitiesStore.index(ACTOR_FIELD)
+
+    for await (const cursor of activitiesIndex.iterate(actor.id)) {
+      await activitiesStore.delete(cursor.primaryKey)
+    }
+
+    await activitiesTx.done
+    console.log(`Removed all activities related to actor: ${url}`)
+
+    // Additionally, remove notes associated with the actor's activities using async iteration
+    const notesTx = this.db.transaction(NOTES_STORE, 'readwrite')
+    const notesStore = notesTx.objectStore(NOTES_STORE)
+    const notesIndex = notesStore.index(ATTRIBUTED_TO_FIELD)
+
+    for await (const cursor of notesIndex.iterate(actor.id)) {
+      await notesStore.delete(cursor.primaryKey)
+    }
+
+    await notesTx.done
+    console.log(`Removed all notes related to actor: ${url}`)
+  }
+
+  // Method to retrieve all followed actors
+  async getFollowedActors () {
+    const tx = this.db.transaction(FOLLOWED_ACTORS_STORE, 'readonly')
+    const store = tx.objectStore(FOLLOWED_ACTORS_STORE)
+    const followedActors = []
+    for await (const cursor of store) {
+      followedActors.push(cursor.value)
+    }
+    return followedActors
+  }
+
+  // Method to check if an actor is followed
+  async isActorFollowed (url) {
+    try {
+      const record = await this.db.get(FOLLOWED_ACTORS_STORE, url)
+      return !!record // Convert the record to a boolean indicating if the actor is followed
+    } catch (error) {
+      console.error(`Error checking if actor is followed: ${url}`, error)
+      return false // Assume not followed if there's an error
+    }
+  }
+
+  async hasFollowedActors () {
+    const followedActors = await this.getFollowedActors()
+    return followedActors.length > 0
+  }
+
+  async setTheme (themeName) {
+    await this.db.put('settings', { key: 'theme', value: themeName })
+  }
+
+  async getTheme () {
+    const themeSetting = await this.db.get('settings', 'theme')
+    return themeSetting ? themeSetting.value : null
   }
 }
 
@@ -258,11 +483,15 @@ function upgrade (db) {
   actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
   actors.createIndex(URL_FIELD, URL_FIELD)
 
+  db.createObjectStore(FOLLOWED_ACTORS_STORE, {
+    keyPath: 'url'
+  })
+
   const notes = db.createObjectStore(NOTES_STORE, {
     keyPath: 'id',
     autoIncrement: false
   })
-
+  notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
   addRegularIndex(notes, TO_FIELD)
   addRegularIndex(notes, URL_FIELD)
   addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
@@ -275,8 +504,10 @@ function upgrade (db) {
     keyPath: 'id',
     autoIncrement: false
   })
+  activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
   addSortedIndex(activities, ACTOR_FIELD)
   addSortedIndex(activities, TO_FIELD)
+  addRegularIndex(activities, PUBLISHED_FIELD)
 
   function addRegularIndex (store, field, options = {}) {
     store.createIndex(field, field, options)
@@ -284,4 +515,15 @@ function upgrade (db) {
   function addSortedIndex (store, field, options = {}) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
+
+  if (!db.objectStoreNames.contains('settings')) {
+    db.createObjectStore('settings', { keyPath: 'key' })
+  }
+}
+
+async function parsePostHtml (htmlContent) {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlContent, 'text/html')
+  const alternateLink = doc.querySelector('link[rel="alternate"]')
+  return alternateLink ? alternateLink.href : null
 }

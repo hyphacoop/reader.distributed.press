@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Followed Accounts</title>
+<style>
+  @import url("./followed-accounts.css");
+  @import url("./theme.css");
+  @import url("./index.css");
+  @import url("./timeline.css");
+  @import url("./post.css");
+</style>
+<div class="container">
+  <div class="sidebar">
+    <h1 class="header-branding">Social Reader</h1>
+    <div class="controls">
+      <a href="./followed-accounts.html"
+        >Following · <followed-count></followed-count
+      ></a>
+    </div>
+    <nav>
+      <theme-selector></theme-selector>
+      <a href="./">Home</a>
+      <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+        >Social Inbox</a
+      >
+      <a href="https://distributed.press">Distributed Press</a>
+    </nav>
+  </div>
+  <div class="followed-container">
+    <p>
+      You're following
+      <b> <followed-count id="followCount"></followed-count> accounts </b>on the
+      fediverse.<br />
+      <span
+        >To sync your list of followed accounts across multiple devices, be sure
+        to ⬆️ export your followed list from one device and 📥 import it on the
+        other.</span
+      >
+    </p>
+    <div class="imp-exp-btn">
+      <button id="exportFollowedList">Export</button>
+      <button id="importFollowedList">Import</button>
+      <input type="file" id="fileInput" style="display: none" accept=".json" />
+    </div>
+    <followed-actors-list></followed-actors-list>
+    <span class="cache-warning-msg"
+      >⚠️ Before clearing your browser's cache, ensure you export your followed
+      list.</span
+    >
+  </div>
+</div>
+<script>
+  document
+    .getElementById("exportFollowedList")
+    .addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("exportFollowed"));
+    });
+
+  document
+    .getElementById("importFollowedList")
+    .addEventListener("click", () => {
+      document.getElementById("fileInput").click();
+    });
+
+  document.getElementById("fileInput").addEventListener("change", function () {
+    if (this.files[0]) {
+      const event = new CustomEvent("importFollowed", {
+        detail: { file: this.files[0] },
+      });
+      window.dispatchEvent(event);
+      this.value = "";
+    }
+  });
+</script>
+<script type="module" src="followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>

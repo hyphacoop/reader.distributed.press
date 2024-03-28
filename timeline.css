@@ -17,6 +17,10 @@ body {
   margin-top: 20px;
 }
 
+.header-branding {
+  color: var(--rdp-text-color);
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -28,6 +32,17 @@ body {
   font-size: 1.8em;
   font-weight: normal;
   margin-bottom: 0.6em;
+}
+
+.controls a {
+  color: var(--rdp-text-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: bold;
+  margin-bottom: 0.4em;
+}
+.controls a:hover {
+  text-decoration: underline;
 }
 
 .sidebar nav {
@@ -42,7 +57,7 @@ body {
 }
 
 .sidebar nav a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 reader-timeline {
@@ -82,6 +97,6 @@ reader-timeline {
   reader-timeline {
     width: 100%;
     max-width: 100%;
-    margin-top: 130px;
+    margin-top: 150px;
   }
 }

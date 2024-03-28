@@ -1,51 +1,53 @@
-import { db } from "./dbInstance.js";
+import { db } from './dbInstance.js'
+
+let hasLoaded = false
 
 class ReaderTimeline extends HTMLElement {
-  constructor() {
-    super();
-    this.actorUrls = [
-      "https://staticpub.mauve.moe/about.jsonld",
-      "https://hypha.coop/about.jsonld",
-      "https://prueba-cola-de-moderacion-2.sutty.nl/about.jsonld",
-    ];
-    this.processedNotes = new Set(); // To keep track of notes already processed
+  connectedCallback () {
+    this.initializeDefaultFollowedActors().then(() => this.initTimeline())
   }
 
-  connectedCallback() {
-    this.initTimeline();
+  async initializeDefaultFollowedActors () {
+    const defaultActors = [
+      'https://social.distributed.press/v1/@announcements@social.distributed.press/',
+      'https://hypha.coop/about.jsonld',
+      'https://sutty.nl/about.jsonld'
+      // "https://akhilesh.sutty.nl/about.jsonld",
+      // "https://staticpub.mauve.moe/about.jsonld",
+    ]
+
+    // Check if followed actors have already been initialized
+    const hasFollowedActors = await db.hasFollowedActors()
+    if (!hasFollowedActors) {
+      await Promise.all(
+        defaultActors.map(async (actorUrl) => {
+          await db.followActor(actorUrl)
+        })
+      )
+    }
   }
 
-  async initTimeline() {
-    this.innerHTML = ""; // Clear existing content
+  async initTimeline () {
+    // Todo: Use filters from attributes
+    // TODO: Use async iterator to render
+    const allNotes = await db.searchNotes({})
+    this.innerHTML = '' // Clear existing content
 
-    for (const actorUrl of this.actorUrls) {
-      try {
-        console.log("Loading actor:", actorUrl);
-        await db.ingestActor(actorUrl);
-      } catch (error) {
-        console.error(`Error loading actor ${actorUrl}:`, error);
-      }
+    for (const note of allNotes) {
+      const activityElement = document.createElement('distributed-post')
+      activityElement.setAttribute('url', note.id)
+      this.appendChild(activityElement)
     }
 
-    // After ingesting all actors, search for all notes once
-    try {
-      const allNotes = await db.searchNotes({});
-      // Sort all notes by published date in descending order
-      allNotes.sort((a, b) => new Date(b.published) - new Date(a.published));
+    if (!hasLoaded) {
+      hasLoaded = true
+      // Dynamically load followed actors
+      const followedActors = await db.getFollowedActors()
 
-      // Create and append elements for each note
-      allNotes.forEach((note) => {
-        if (!this.processedNotes.has(note.id)) {
-          const activityElement = document.createElement("distributed-post");
-          activityElement.setAttribute("url", note.id);
-          this.appendChild(activityElement);
-          this.processedNotes.add(note.id); // Mark this note as processed
-        }
-      });
-    } catch (error) {
-      console.error(`Error retrieving notes:`, error);
+      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+      await this.initTimeline()
     }
   }
 }
 
-customElements.define("reader-timeline", ReaderTimeline);
+customElements.define('reader-timeline', ReaderTimeline)

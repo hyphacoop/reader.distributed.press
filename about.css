@@ -1,0 +1,34 @@
+html {
+  background: var(--bg-color);
+  font-family: var(--rdp-font);
+}
+
+.about-container {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+  margin-top: 10px;
+}
+
+.about-info {
+  text-align: left;
+  color: var(--rdp-text-color);
+  width: 100%;
+}
+
+.about-info a {
+  color: var(--rdp-details-color);
+  text-decoration: underline;
+}
+.about-info a:hover {
+  text-decoration: none;
+}
+
+@media screen and (max-width: 768px) {
+  .about-container {
+    width: 80%;
+    max-width: 100%;
+    margin-top: 150px;
+  }
+}
