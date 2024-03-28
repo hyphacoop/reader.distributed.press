@@ -90,35 +90,35 @@
 
 :root[data-theme="deuteranomaly"] img,
 :root[data-theme="deuteranomaly"] video {
-  filter: hue-rotate(7.5deg) contrast(90%);
+  filter: url(#deuteranomaly);
 }
 
 :root[data-theme="protanomaly"] img,
 :root[data-theme="protanomaly"] video {
-  filter: hue-rotate(-7.5deg) contrast(90%);
+  filter: url(#protanomaly);
 }
 
 :root[data-theme="deuteranopia"] img,
 :root[data-theme="deuteranopia"] video {
-  filter: hue-rotate(10deg) contrast(125%);
+  filter: url(#deuteranopia);
 }
 
 :root[data-theme="protanopia"] img,
 :root[data-theme="protanopia"] video {
-  filter: hue-rotate(-10deg) contrast(125%);
+  filter: url(#protanopia);
 }
 
 :root[data-theme="tritanopia"] img,
 :root[data-theme="tritanopia"] video {
-  filter: hue-rotate(90deg) contrast(90%);
+  filter: url(#tritanopia);
 }
 
 :root[data-theme="tritanomaly"] img,
 :root[data-theme="tritanomaly"] video {
-  filter: hue-rotate(45deg) contrast(90%);
+  filter: url(#tritanomaly);
 }
 
 :root[data-theme="achromatopsia"] img,
 :root[data-theme="achromatopsia"] video {
-  filter: grayscale(100%) contrast(75%);
+  filter: url(#achromatopsia);
 }
