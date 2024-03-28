@@ -48,6 +48,7 @@ class ThemeSelector extends HTMLElement {
     const options = [
       { value: 'light', text: 'Light' },
       { value: 'dark', text: 'Dark' },
+      { value: '', text: '👁️ Color Blind Themes 👁️', disabled: true },
       { value: 'deuteranomaly', text: 'Deuteranomaly (Green-Weak)' },
       { value: 'protanomaly', text: 'Protanomaly (Red-Weak)' },
       { value: 'deuteranopia', text: 'Deuteranopia (Green-Blind)' },
