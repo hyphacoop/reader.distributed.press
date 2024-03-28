@@ -516,7 +516,9 @@ function upgrade (db) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
 
-  db.createObjectStore('settings', { keyPath: 'key' })
+  if (!db.objectStoreNames.contains('settings')) {
+    db.createObjectStore('settings', { keyPath: 'key' })
+  }
 }
 
 async function parsePostHtml (htmlContent) {
