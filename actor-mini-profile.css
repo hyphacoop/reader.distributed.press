@@ -1,0 +1,26 @@
+.mini-profile {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-mini-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #000000;
+  margin-right: 6px;
+}
+
+.profile-mini-name {
+  color: var(--rdp-text-color);
+}
+
+.profile-followed-date {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--rdp-details-color);
+  margin-left: 34px;
+  margin-bottom: 6px;
+}

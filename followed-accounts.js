@@ -43,10 +43,9 @@ class FollowedActorsList extends HTMLElement {
     const followedActors = await db.getFollowedActors()
     this.innerHTML = ''
     followedActors.forEach((actor) => {
-      const actorElement = document.createElement('div')
-      const formattedDate = this.formatDate(actor.followedAt)
-
-      actorElement.innerText = `- Followed URL: ${actor.url} - Followed At: ${formattedDate}`
+      const actorElement = document.createElement('actor-mini-profile')
+      actorElement.setAttribute('url', actor.url)
+      actorElement.setAttribute('followed-at', this.formatDate(actor.followedAt))
 
       this.appendChild(actorElement)
     })
@@ -56,11 +55,7 @@ class FollowedActorsList extends HTMLElement {
     const options = {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZoneName: 'short'
+      day: 'numeric'
     }
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', options)
