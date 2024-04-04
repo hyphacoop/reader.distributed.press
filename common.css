@@ -1,0 +1,4 @@
+html {
+  background: var(--bg-color);
+  font-family: var(--rdp-font);
+}

@@ -11,10 +11,6 @@
 }
 
 /* Main styles */
-html {
-  font-family: var(--rdp-font);
-}
-
 img,
 video {
   max-width: 100%;
