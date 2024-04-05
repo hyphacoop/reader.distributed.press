@@ -37,9 +37,10 @@ class ActorMiniProfile extends HTMLElement {
     // Clear existing content
     this.innerHTML = ''
 
-    // Container for the icon and name, which should be clickable
-    const clickableContainer = document.createElement('div')
+    // Container for the icon and name, which should be a button for clickable actions
+    const clickableContainer = document.createElement('button')
     clickableContainer.className = 'mini-profile'
+    clickableContainer.setAttribute('type', 'button')
 
     let iconUrl = './assets/profile.png'
     if (actorInfo.icon) {
