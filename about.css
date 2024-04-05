@@ -6,52 +6,34 @@
   margin-top: 10px;
 }
 
-.about-info {
+/* Apply general styles to all section elements within about-container */
+.about-container > section {
   text-align: left;
   color: var(--rdp-text-color);
   width: 100%;
+  margin-bottom: 2rem;
 }
 
-.about-info a {
-  color: var(--rdp-link-color);
-  text-decoration: underline;
-}
-.about-info a:hover {
-  text-decoration: none;
-}
-
-.faq-section {
-  margin-top: 2rem;
-  text-align: left;
-}
-
-.faq-section h2 {
-  color: var(--rdp-text-color);
-}
-
+.about-info a,
 .faq-section a {
   color: var(--rdp-link-color);
   text-decoration: underline;
 }
+
+.about-info a:hover,
 .faq-section a:hover {
   text-decoration: none;
 }
 
 .faq-section details {
-  color: var(--rdp-text-color);
   margin-bottom: 1rem;
   border-bottom: 1px solid var(--rdp-border-color);
   padding-bottom: 1rem;
 }
 
 .faq-section summary {
-  color: var(--rdp-text-color);
   font-weight: bold;
   cursor: pointer;
-}
-
-.faq-section p {
-  margin-top: 0.5rem;
 }
 
 @media screen and (max-width: 768px) {
