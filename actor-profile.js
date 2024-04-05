@@ -16,10 +16,16 @@ class ActorProfile extends HTMLElement {
   }
 
   async fetchAndRenderActorProfile (url) {
-    const actorInfo = await db.getActor(url)
-    console.log(actorInfo)
-    if (actorInfo) {
-      this.renderActorProfile(actorInfo)
+    try {
+      const actorInfo = await db.getActor(url)
+      if (actorInfo) {
+        this.renderActorProfile(actorInfo)
+      } else {
+        this.renderError('Actor information not found')
+      }
+    } catch (error) {
+      console.error('Error fetching actor info:', error)
+      this.renderError('An error occurred while fetching actor information.')
     }
   }
 
@@ -92,6 +98,13 @@ class ActorProfile extends HTMLElement {
       actorInfo.outbox
     )
     this.dispatchEvent(new CustomEvent('outboxUpdated', { bubbles: true }))
+  }
+
+  renderError (message) {
+    this.innerHTML = '' // Clear existing content
+    const errorComponent = document.createElement('error-message')
+    errorComponent.setAttribute('message', message)
+    this.appendChild(errorComponent)
   }
 }
 

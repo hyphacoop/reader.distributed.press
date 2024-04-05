@@ -39,13 +39,6 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
-function renderError (message) {
-  const errorElement = document.createElement('p')
-  errorElement.classList.add('error')
-  errorElement.textContent = message
-  return errorElement
-}
-
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes () {
@@ -206,11 +199,9 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = ''
 
-    const errorElement = document.createElement('p')
-    errorElement.className = 'error'
-    errorElement.textContent = errorMessage
-    errorElement.style.color = 'red'
-    this.appendChild(errorElement)
+    const errorComponent = document.createElement('error-message')
+    errorComponent.setAttribute('message', errorMessage)
+    this.appendChild(errorComponent)
   }
 }
 
