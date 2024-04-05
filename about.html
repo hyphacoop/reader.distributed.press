@@ -11,22 +11,7 @@
   @import url("./post.css");
 </style>
 <div class="container">
-  <div class="sidebar">
-    <h1 class="header-branding">Social Reader</h1>
-    <div class="controls">
-      <a href="./followed-accounts.html"
-        >Following · <followed-count></followed-count
-      ></a>
-    </div>
-    <nav>
-      <theme-selector></theme-selector>
-      <a href="./">Home</a>
-      <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
-        >Social Inbox</a
-      >
-      <a href="https://distributed.press">Distributed Press</a>
-    </nav>
-  </div>
+  <sidebar-nav></sidebar-nav>
   <div class="about-container">
     <div class="about-info">
       <p>
@@ -112,5 +97,6 @@
     <!-- This is an empty column to balance the layout -->
   </div>
 </div>
+<script type="module" src="./sidebar.js"></script>
 <script type="module" src="followed-accounts.js"></script>
 <script type="module" src="./theme-selector.js"></script>

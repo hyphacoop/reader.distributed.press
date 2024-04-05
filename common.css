@@ -2,3 +2,30 @@ html {
   background: var(--bg-color);
   font-family: var(--rdp-font);
 }
+
+.container {
+  display: flex;
+  justify-content: space-between;
+  max-width: 1200px;
+  width: 100%;
+  margin-top: 20px;
+  position: relative;
+}
+
+/* Empty right column for balance */
+.right-column {
+  flex: 0 0 200px;
+}
+
+@media screen and (max-width: 1280px) {
+  .right-column {
+    flex: 0 0 100px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: center;
+  }
+}
