@@ -28,4 +28,13 @@ html {
     flex-direction: column;
     align-items: center;
   }
+
+  .main-content {
+    width: 80%;
+    max-width: 100%;
+    margin-top: 150px;
+  }
+  .actor-profile{
+    width: 100%;
+  }
 }

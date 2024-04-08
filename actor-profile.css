@@ -98,10 +98,4 @@ follow-button[state="unfollow"]:hover {
   .profile-summary {
     width: 100%;
   }
-
-  .actor-profile {
-    width: 100%;
-    max-width: 100%;
-    margin-top: 150px;
-  }
 }
