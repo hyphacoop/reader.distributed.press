@@ -10,12 +10,6 @@
   --rdp-border-radius: 6px;
 }
 
-/* Main styles */
-img,
-video {
-  max-width: 100%;
-}
-
 /* Component styles */
 .distributed-post {
   background: var(--rdp-bg-color);

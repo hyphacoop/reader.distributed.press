@@ -3,6 +3,12 @@ html {
   font-family: var(--rdp-font);
 }
 
+/* Main styles */
+img,
+video {
+  max-width: 100%;
+}
+
 .container {
   display: flex;
   justify-content: space-between;
