@@ -93,7 +93,7 @@ class ActorProfile extends HTMLElement {
     this.appendChild(profileContainer)
 
     // Update distributed-outbox URL based on fetched actorInfo
-    this.querySelector('distributed-outbox').setAttribute(
+    distributedOutbox.setAttribute(
       'url',
       actorInfo.outbox
     )
