@@ -49,7 +49,7 @@ export class ActivityPubDB extends EventTarget {
   }
 
   static async load (name = DEFAULT_DB, fetch = globalThis.fetch) {
-    const db = await openDB(name, 1, {
+    const db = await openDB(name, 2, {
       upgrade
     })
 
@@ -519,9 +519,7 @@ function upgrade (db) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
 
-  if (!db.objectStoreNames.contains('settings')) {
-    db.createObjectStore('settings', { keyPath: 'key' })
-  }
+  db.createObjectStore('settings', { keyPath: 'key' })
 }
 
 async function parsePostHtml (htmlContent) {
