@@ -62,10 +62,6 @@
   color: var(--rdp-details-color);
 }
 
-summary {
-  cursor: pointer;
-}
-
 .cw-summary {
   color: var(--rdp-cw-color);
 }
