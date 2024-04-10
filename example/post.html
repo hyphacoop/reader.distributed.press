@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <title>Reader Post</title>
 <style>
-  @import url("./post.css");
+  @import url("../post.css");
+  @import url("../common.css");
 </style>
 <div id="post-container">
   <!-- https://staticpub.mauve.moe/helloworld.html -->
@@ -10,11 +11,9 @@
   <distributed-post id="distributedPost"></distributed-post>
 </div>
 
-<script type="module" src="./post.js"></script>
-<!-- Dynamically set post URL from query string parameter -->
+<script type="module" src="../post.js"></script>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const postUrl = params.get("url");
+  const postUrl = "ipns://hypha.coop/dripline/announcing-dp-social-inbox/create/1701734400.jsonld"
 
   if (postUrl) {
     const postElement = document.getElementById("distributedPost");
@@ -23,4 +22,4 @@
     console.error("URL parameter is missing");
   }
 </script>
-<script type="module" src="./error-message.js"></script>
+<script type="module" src="../error-message.js"></script>

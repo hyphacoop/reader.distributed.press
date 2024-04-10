@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <title>Reader Outbox</title>
 <style>
-  @import url("./outbox.css");
-  @import url("./post.css");
+  @import url("../outbox.css");
+  @import url("../post.css");
+  @import url("../common.css");
 </style>
 <div id="outbox-container">
   <!-- hyper://staticpub.mauve.moe/outbox.jsonld -->
   <!-- ipns://staticpub.mauve.moe/outbox-ipns.jsonld -->
   <distributed-outbox
-    url="hyper://hypha.coop/outbox.jsonld"
+    url="ipns://hypha.coop/outbox.jsonld"
   ></distributed-outbox>
 </div>
 <div class="pagination-controls">
   <button id="prevPage">< Prev</button>
   <button id="nextPage">Next ></button>
 </div>
-<script type="module" src="./outbox.js"></script>
-<script type="module" src="./post.js"></script>
+<script type="module" src="../outbox.js"></script>
+<script type="module" src="../post.js"></script>
 <script>
   const outboxElement = document.querySelector("distributed-outbox");
   const prevButton = document.getElementById("prevPage");
