@@ -1,42 +1,37 @@
 import { db } from './dbInstance.js'
 
-class FollowedActorsList extends HTMLElement {
+export class FollowedActorsList extends HTMLElement {
   constructor () {
     super()
+    this.updateFollowedActors = this.updateFollowedActors.bind(this)
   }
 
   connectedCallback () {
     this.renderFollowedActors()
 
-    window.addEventListener(
-      'exportFollowed',
-      FollowedActorsList.exportFollowedList
-    )
+    db.addEventListener('actorFollowed', this.updateFollowedActors)
+    db.addEventListener('actorUnfollowed', this.updateFollowedActors)
 
-    window.addEventListener('importFollowed', (e) => {
+    this.addEventListener('exportFollowed', FollowedActorsList.exportFollowedList)
+    this.addEventListener('importFollowed', (e) => {
       FollowedActorsList.importFollowedList(e.detail.file)
-    })
-
-    // Listen for the custom event to refresh the list and count
-    window.addEventListener('followedActorsUpdated', async () => {
-      await this.renderFollowedActors()
-      document.getElementById('followCount').updateCountOnLoad()
     })
   }
 
   disconnectedCallback () {
-    window.removeEventListener(
-      'exportFollowed',
-      FollowedActorsList.exportFollowedList
-    )
-    window.removeEventListener(
-      'importFollowed',
-      FollowedActorsList.importFollowedList
-    )
-    window.removeEventListener(
-      'followedActorsUpdated',
-      this.renderFollowedActors
-    )
+    db.removeEventListener('actorFollowed', this.updateFollowedActors)
+    db.removeEventListener('actorUnfollowed', this.updateFollowedActors)
+
+    this.removeEventListener('exportFollowed', FollowedActorsList.exportFollowedList)
+    this.removeEventListener('importFollowed', FollowedActorsList.importFollowedList)
+  }
+
+  async updateFollowedActors () {
+    await this.renderFollowedActors()
+    const followCount = document.querySelector('followed-count')
+    if (followCount) {
+      followCount.updateCount()
+    }
   }
 
   async renderFollowedActors () {
@@ -46,17 +41,12 @@ class FollowedActorsList extends HTMLElement {
       const actorElement = document.createElement('actor-mini-profile')
       actorElement.setAttribute('url', actor.url)
       actorElement.setAttribute('followed-at', this.formatDate(actor.followedAt))
-
       this.appendChild(actorElement)
     })
   }
 
   formatDate (dateString) {
-    const options = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }
+    const options = { year: 'numeric', month: 'long', day: 'numeric' }
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', options)
   }
@@ -85,8 +75,6 @@ class FollowedActorsList extends HTMLElement {
           await db.followActor(actor.url)
         }
       }
-      // After import, dispatch a custom event to notify the component
-      window.dispatchEvent(new CustomEvent('followedActorsUpdated'))
     }
     reader.readAsText(file)
   }
@@ -97,6 +85,13 @@ customElements.define('followed-actors-list', FollowedActorsList)
 class FollowedCount extends HTMLElement {
   connectedCallback () {
     this.updateCountOnLoad()
+    db.addEventListener('actorFollowed', () => this.updateCount())
+    db.addEventListener('actorUnfollowed', () => this.updateCount())
+  }
+
+  disconnectedCallback () {
+    db.removeEventListener('actorFollowed', () => this.updateCount())
+    db.removeEventListener('actorUnfollowed', () => this.updateCount())
   }
 
   async updateCountOnLoad () {

@@ -39,26 +39,23 @@
     <!-- This is an empty column to balance the layout -->
   </div>
 </div>
-<script>
-  document
-    .getElementById("exportFollowedList")
-    .addEventListener("click", () => {
-      window.dispatchEvent(new CustomEvent("exportFollowed"));
-    });
+<script type="module">
+  import { FollowedActorsList } from './followed-accounts.js';
 
-  document
-    .getElementById("importFollowedList")
-    .addEventListener("click", () => {
-      document.getElementById("fileInput").click();
-    });
+  const exportBtn = document.getElementById("exportFollowedList");
+  const importBtn = document.getElementById("importFollowedList");
+  const fileInput = document.getElementById("fileInput");
 
-  document.getElementById("fileInput").addEventListener("change", function () {
+  exportBtn.addEventListener("click", FollowedActorsList.exportFollowedList);
+
+  importBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", function () {
     if (this.files[0]) {
-      const event = new CustomEvent("importFollowed", {
-        detail: { file: this.files[0] },
-      });
-      window.dispatchEvent(event);
-      this.value = "";
+      FollowedActorsList.importFollowedList(this.files[0]);
+      this.value = ""; // Clear the file input after importing
     }
   });
 </script>

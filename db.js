@@ -41,8 +41,9 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
-export class ActivityPubDB {
+export class ActivityPubDB extends EventTarget {
   constructor (db, fetch = globalThis.fetch) {
+    super()
     this.db = db
     this.fetch = fetch
   }
@@ -394,6 +395,7 @@ export class ActivityPubDB {
     const followedAt = new Date()
     await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt })
     console.log(`Followed actor: ${url} at ${followedAt}`)
+    this.dispatchEvent(new CustomEvent('actorFollowed', { detail: { url, followedAt } }))
   }
 
   // Method to unfollow an actor
@@ -401,6 +403,7 @@ export class ActivityPubDB {
     await this.db.delete(FOLLOWED_ACTORS_STORE, url)
     await this.purgeActor(url)
     console.log(`Unfollowed and purged actor: ${url}`)
+    this.dispatchEvent(new CustomEvent('actorUnfollowed', { detail: { url } }))
   }
 
   async purgeActor (url) {
