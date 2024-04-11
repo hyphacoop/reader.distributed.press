@@ -219,7 +219,7 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async searchNotes (criteria) {
+  async searchNotes (criteria, { skip = 0, limit = 10 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     const notes = []
     const index = criteria.attributedTo
@@ -232,9 +232,10 @@ export class ActivityPubDB extends EventTarget {
     }
 
     // Implement additional filtering logic if needed based on other criteria (like time ranges or tags)
-    // For example:
-    // notes.filter(note => note.published >= criteria.startDate && note.published <= criteria.endDate);
-    return notes.sort((a, b) => b.published - a.published) // Sort by published date in descending order
+    const sortedNotes = notes.sort((a, b) => b.published - a.published)
+    const paginatedNotes = sortedNotes.slice(skip, skip + limit)
+
+    return paginatedNotes
   }
 
   async ingestActor (url) {

@@ -3,6 +3,24 @@ import { db } from './dbInstance.js'
 let hasLoaded = false
 
 class ReaderTimeline extends HTMLElement {
+  skip = 0
+  limit = 10
+  hasMoreItems = true
+  loadMoreBtn = null
+
+  constructor () {
+    super()
+    this.loadMoreBtn = document.createElement('button')
+    this.loadMoreBtn.textContent = 'Load More..'
+    this.loadMoreBtn.className = 'load-more-btn'
+
+    this.loadMoreBtnWrapper = document.createElement('div')
+    this.loadMoreBtnWrapper.className = 'load-more-btn-container'
+    this.loadMoreBtnWrapper.appendChild(this.loadMoreBtn)
+
+    this.loadMoreBtn.addEventListener('click', () => this.loadMore())
+  }
+
   connectedCallback () {
     this.initializeDefaultFollowedActors().then(() => this.initTimeline())
   }
@@ -28,25 +46,35 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline () {
-    // Todo: Use filters from attributes
-    // TODO: Use async iterator to render
-    const allNotes = await db.searchNotes({})
-    this.innerHTML = '' // Clear existing content
-
-    for (const note of allNotes) {
-      const activityElement = document.createElement('distributed-post')
-      activityElement.setAttribute('url', note.id)
-      this.appendChild(activityElement)
-    }
-
     if (!hasLoaded) {
       hasLoaded = true
-      // Dynamically load followed actors
       const followedActors = await db.getFollowedActors()
-
       await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
-      await this.initTimeline()
     }
+    this.loadMore()
+  }
+
+  async loadMore () {
+    // Remove the button before loading more items
+    this.loadMoreBtnWrapper.remove()
+
+    const notes = await db.searchNotes({}, { skip: this.skip, limit: this.limit })
+    notes.forEach(note => this.appendNoteElement(note))
+
+    // Update skip value and determine if there are more items
+    this.skip += this.limit
+    this.hasMoreItems = notes.length === this.limit
+
+    // Append the button at the end if there are more items
+    if (this.hasMoreItems) {
+      this.appendChild(this.loadMoreBtnWrapper)
+    }
+  }
+
+  appendNoteElement (note) {
+    const activityElement = document.createElement('distributed-post')
+    activityElement.setAttribute('url', note.id)
+    this.appendChild(activityElement)
   }
 }
 

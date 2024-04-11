@@ -9,6 +9,12 @@ body {
   background: var(--bg-color);
 }
 
+.load-more-btn-container {
+  text-align: center;
+  margin-top: 15px;
+  margin-bottom: 15px;  
+}
+
 reader-timeline {
   flex: 1;
   max-width: 600px;
