@@ -1,31 +1,55 @@
 import { db } from './dbInstance.js'
 
 class DistributedOutbox extends HTMLElement {
+  skip = 0
+  limit = 10
+
   constructor () {
     super()
     this.renderedItems = new Map() // Tracks rendered items by ID
-    this.numPosts = 32 // Default value
-    this.page = 1 // Default value
-    this.totalPages = 0 // Keep track of total pages
   }
 
   static get observedAttributes () {
-    return ['url', 'num-posts', 'page']
+    return ['url']
   }
 
   connectedCallback () {
-    // Use attributes or default values
-    this.numPosts =
-      parseInt(this.getAttribute('num-posts'), 10) || this.numPosts
-    this.page = parseInt(this.getAttribute('page'), 10) || this.page
-    this.loadOutbox(this.getAttribute('url'))
+    this.outboxUrl = this.getAttribute('url')
+    this.loadOutbox(this.outboxUrl)
   }
 
   async loadOutbox (outboxUrl) {
     this.clearContent()
-    for await (const item of this.fetchOutboxItems(outboxUrl)) {
-      this.processItem(item)
+    const items = await this.collectItems(outboxUrl, { skip: this.skip, limit: this.limit + 1 })
+    items.slice(0, this.limit).forEach(item => this.processItem(item))
+
+    // Update skip for next potential load
+    this.skip += this.limit
+
+    // Check if there are more items to load
+    if (items.length > this.limit) {
+      this.createLoadMoreButton()
     }
+  }
+
+  async loadMore () {
+    this.removeLoadMoreButton()
+    const items = await this.collectItems(this.outboxUrl, { skip: this.skip, limit: this.limit + 1 })
+    items.slice(0, this.limit).forEach(item => this.processItem(item))
+
+    this.skip += this.limit
+
+    if (items.length > this.limit) {
+      this.createLoadMoreButton()
+    }
+  }
+
+  async collectItems (outboxUrl, { skip, limit }) {
+    const items = []
+    for await (const item of db.iterateCollection(outboxUrl, { skip, limit })) {
+      items.push(item)
+    }
+    return items
   }
 
   processItem (item) {
@@ -40,27 +64,6 @@ class DistributedOutbox extends HTMLElement {
     }
   }
 
-  async * fetchOutboxItems (outboxUrl) {
-    if (!outboxUrl) {
-      console.error('No outbox URL provided')
-      return
-    }
-
-    /*
-    this.totalPages = Math.ceil(items.length / this.numPosts);
-    this.page = Math.min(this.page, this.totalPages);
-
-      // Calculate the range of items to be loaded based on the current page and numPosts
-      const startIndex = (this.page - 1) * this.numPosts;
-      const endIndex = startIndex + this.numPosts;
-
-      const itemsToLoad = items.slice(startIndex, endIndex);
-      */
-
-    // TODO: Ingest actor and searchActivities instead
-    yield * db.iterateCollection(outboxUrl)
-  }
-
   renderItem (item) {
     const activityElement = document.createElement('distributed-activity')
     activityElement.type = item.type
@@ -68,35 +71,38 @@ class DistributedOutbox extends HTMLElement {
     this.appendChild(activityElement)
   }
 
-  nextPage () {
-    const currentPage = this.page
-    if (currentPage < this.totalPages) {
-      this.setAttribute('page', currentPage + 1)
-    }
-  }
+  createLoadMoreButton () {
+    this.removeLoadMoreButton()
 
-  prevPage () {
-    const currentPage = this.page
-    this.setAttribute('page', Math.max(1, currentPage - 1))
-  }
+    const loadMoreBtn = document.createElement('button')
+    loadMoreBtn.textContent = 'Load More'
+    loadMoreBtn.className = 'load-more-btn'
 
-  attributeChangedCallback (name, oldValue, newValue) {
-    if (name === 'url') {
-      this.clearContent()
-      this.loadOutbox(newValue)
-    } else if (name === 'num-posts' || name === 'page') {
-      // Convert attribute name from kebab-case to camelCase
-      const propName = name.replace(/-([a-z])/g, (g) => g[1].toUpperCase())
-      this[propName] = parseInt(newValue, 10)
-      this.clearContent()
-      this.loadOutbox(this.getAttribute('url'))
-    }
+    const loadMoreBtnWrapper = document.createElement('div')
+    loadMoreBtnWrapper.className = 'load-more-btn-container'
+    loadMoreBtnWrapper.appendChild(loadMoreBtn)
+
+    loadMoreBtn.addEventListener('click', () => this.loadMore())
+    this.appendChild(loadMoreBtnWrapper)
   }
 
   clearContent () {
-    // Clear existing content
     this.innerHTML = ''
     this.renderedItems.clear()
+  }
+
+  removeLoadMoreButton () {
+    const loadMoreBtnWrapper = this.querySelector('.load-more-btn-container')
+    if (loadMoreBtnWrapper) {
+      loadMoreBtnWrapper.remove()
+    }
+  }
+
+  attributeChangedCallback (name, oldValue, newValue) {
+    if (name === 'url' && newValue !== oldValue) {
+      this.outboxUrl = newValue
+      this.loadOutbox(this.outboxUrl)
+    }
   }
 }
 
