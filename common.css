@@ -18,6 +18,12 @@ video {
   position: relative;
 }
 
+.load-more-btn-container {
+  text-align: center;
+  margin-top: 15px;
+  margin-bottom: 15px;  
+}
+
 /* Empty right column for balance */
 .right-column {
   flex: 0 0 200px;
