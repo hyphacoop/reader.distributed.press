@@ -12,21 +12,6 @@
     url="ipns://hypha.coop/outbox.jsonld"
   ></distributed-outbox>
 </div>
-<div class="pagination-controls">
-  <button id="prevPage">< Prev</button>
-  <button id="nextPage">Next ></button>
-</div>
 <script type="module" src="../outbox.js"></script>
 <script type="module" src="../post.js"></script>
-<script>
-  const outboxElement = document.querySelector("distributed-outbox");
-  const prevButton = document.getElementById("prevPage");
-  const nextButton = document.getElementById("nextPage");
-
-  if (prevButton) {
-    prevButton.addEventListener("click", () => outboxElement.prevPage());
-  }
-  if (nextButton) {
-    nextButton.addEventListener("click", () => outboxElement.nextPage());
-  }
-</script>
+<script type="module" src="../error-message.js"></script>
