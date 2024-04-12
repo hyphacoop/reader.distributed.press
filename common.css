@@ -49,4 +49,8 @@ video {
   .actor-profile{
     width: 100%;
   }
+
+  sidebar-nav {
+    width: 100%;
+  } 
 }
