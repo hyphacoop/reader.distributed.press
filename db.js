@@ -270,11 +270,15 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
-  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32 } = {}) {
+  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32, sort = 1 } = {}) {
     const collection = await this.#get(collectionOrUrl)
 
-    // TODO: handle pagination here, if collection contains a 'next' or 'first' link.
-    const items = collection.orderedItems || collection.items
+    let items = collection.orderedItems || collection.items
+
+    // Sort items based on the sort parameter (1 for ascending, -1 for descending)
+    if (sort === -1) {
+      items = items.reverse() // Reverse the order for descending
+    }
 
     let toSkip = skip
     let count = 0
@@ -293,12 +297,16 @@ export class ActivityPubDB extends EventTarget {
       return
     }
 
-    // TODO: Error if no first page
     let next = collection.first
     while (next) {
       const page = await this.#get(next)
       next = page.next
-      const items = page.orderedItems || page.items
+      items = page.orderedItems || page.items
+
+      if (sort === -1) {
+        items = items.reverse() // Reverse the order for descending
+      }
+
       for await (const item of this.#getAll(items)) {
         if (toSkip) {
           toSkip--
