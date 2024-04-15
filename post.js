@@ -106,8 +106,18 @@ class DistributedPost extends HTMLElement {
     postContent.classList.add('post-content')
 
     // Determine content source based on structure of jsonLdData
-    const contentSource =
-      jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
+    let contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
+    // Check if the content has a mention and update the href attribute
+    if (jsonLdData.tag && jsonLdData.tag.some(tag => tag.type === 'Mention')) {
+      console.log(jsonLdData.tag.type)
+      jsonLdData.tag.forEach(tag => {
+        if (tag.type === 'Mention') {
+          // Replace the href with the profile link
+          const regex = new RegExp(`href="${tag.href}"`, 'g')
+          contentSource = contentSource.replace(regex, `href="/profile.html?actor=${encodeURIComponent(tag.href)}"`)
+        }
+      })
+    }
 
     // Determine if the content is marked as sensitive in either the direct jsonLdData or within jsonLdData.object
     const isSensitive =
