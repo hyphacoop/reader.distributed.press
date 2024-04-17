@@ -156,7 +156,7 @@ class DistributedActivity extends HTMLElement {
     if (isDirectPost) {
       postUrl = this.activityData.object
     } else if (this.activityData.object && this.activityData.object.id) {
-      postUrl = this.activityData.id
+      postUrl = this.activityData.object.id
     } else {
       postUrl = this.activityData.object
     }
