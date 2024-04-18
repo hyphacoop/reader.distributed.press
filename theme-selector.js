@@ -16,6 +16,13 @@ class ThemeSelector extends HTMLElement {
     this.applyTheme(currentTheme || 'light')
   }
 
+  appendColorBlindFiltersToBody () {
+    const existingSvg = document.querySelector('#colorblind-filters')
+    if (!existingSvg) {
+      document.body.appendChild(createColorBlindFilters())
+    }
+  }
+
   changeTheme (event) {
     const newTheme = event.target.value
     db.setTheme(newTheme)
@@ -132,12 +139,3 @@ class ThemeSelector extends HTMLElement {
 }
 
 customElements.define('theme-selector', ThemeSelector)
-
-function appendColorBlindFiltersToBody () {
-  const existingSvg = document.querySelector('#colorblind-filters')
-  if (!existingSvg) {
-    document.body.appendChild(createColorBlindFilters())
-  }
-}
-
-appendColorBlindFiltersToBody()
