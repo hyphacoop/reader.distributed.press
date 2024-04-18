@@ -1,3 +1,18 @@
+let sidebarTemplateContent
+
+async function loadSidebarTemplate () {
+  const response = await fetch('./sidebar.html')
+  const text = await response.text()
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(text, 'text/html')
+  sidebarTemplateContent = doc.getElementById('sidebar-template').content
+
+  customElements.define('sidebar-nav', SidebarNav)
+}
+
+// Call the function to load the sidebar template immediately
+loadSidebarTemplate()
+
 class SidebarNav extends HTMLElement {
   constructor () {
     super()
@@ -5,22 +20,18 @@ class SidebarNav extends HTMLElement {
     this.initSidebar()
   }
 
-  async initSidebar () {
-    const response = await fetch('./sidebar.html')
-    const text = await response.text()
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(text, 'text/html')
-    const template = doc.getElementById('sidebar-template')
+  initSidebar () {
+    // Use the pre-loaded sidebar template content
+    if (sidebarTemplateContent) {
+      const instance = sidebarTemplateContent.cloneNode(true)
+      this.shadowRoot.appendChild(instance)
 
-    const instance = template.content.cloneNode(true)
-    this.shadowRoot.appendChild(instance)
-
-    const style = document.createElement('style')
-    style.textContent = `
-          @import url("./sidebar.css");
-      `
-    this.shadowRoot.appendChild(style)
+      // Attach the sidebar.css styles
+      const style = document.createElement('style')
+      style.textContent = '@import url("./sidebar.css");'
+      this.shadowRoot.appendChild(style)
+    } else {
+      console.error('Sidebar template has not been loaded yet')
+    }
   }
 }
-
-customElements.define('sidebar-nav', SidebarNav)
