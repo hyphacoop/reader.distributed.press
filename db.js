@@ -6,6 +6,7 @@ export const ACTORS_STORE = 'actors'
 export const NOTES_STORE = 'notes'
 export const ACTIVITIES_STORE = 'activities'
 export const FOLLOWED_ACTORS_STORE = 'followedActors'
+export const DEFAULT_LIMIT = 32
 
 export const ID_FIELD = 'id'
 export const URL_FIELD = 'url'
@@ -200,7 +201,7 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
-  async * searchActivities (actor, { limit = 32, skip = 0 } = {}) {
+  async * searchActivities (actor, { limit = DEFAULT_LIMIT, skip = 0 } = {}) {
     const indexName = ACTOR_FIELD + ', published'
     const tx = this.db.transaction(ACTIVITIES_STORE, 'read')
     const index = tx.store.index(indexName)
@@ -219,7 +220,7 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async searchNotes (criteria, { skip = 0, limit = 10 } = {}) {
+  async searchNotes (criteria, { skip = 0, limit = DEFAULT_LIMIT } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     const notes = []
     const index = criteria.attributedTo
@@ -270,7 +271,7 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
-  async * iterateCollection (collectionOrUrl, { skip = 0, limit = 32, sort = 1 } = {}) {
+  async * iterateCollection (collectionOrUrl, { skip = 0, limit = DEFAULT_LIMIT, sort = 1 } = {}) {
     const collection = await this.#get(collectionOrUrl)
 
     let items = collection.orderedItems || collection.items

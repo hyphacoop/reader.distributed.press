@@ -2,7 +2,7 @@ import { db } from './dbInstance.js'
 
 class DistributedOutbox extends HTMLElement {
   skip = 0
-  limit = 10
+  limit = 32
 
   constructor () {
     super()

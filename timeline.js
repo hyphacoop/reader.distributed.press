@@ -4,7 +4,7 @@ let hasLoaded = false
 
 class ReaderTimeline extends HTMLElement {
   skip = 0
-  limit = 10
+  limit = 32
   hasMoreItems = true
   loadMoreBtn = null
 
