@@ -275,10 +275,13 @@ export class ActivityPubDB extends EventTarget {
     const collection = await this.#get(collectionOrUrl)
 
     let items = collection.orderedItems || collection.items
+    let next, prev
 
-    // Sort items based on the sort parameter (1 for ascending, -1 for descending)
     if (sort === -1) {
-      items = items.reverse() // Reverse the order for descending
+      items = items.reverse()
+      prev = collection.last // Start from the last page if sorting in descending order
+    } else {
+      next = collection.first // Start from the first page if sorting in ascending order
     }
 
     let toSkip = skip
@@ -286,36 +289,35 @@ export class ActivityPubDB extends EventTarget {
 
     if (items) {
       for await (const item of this.#getAll(items)) {
-        if (toSkip) {
+        if (toSkip > 0) {
           toSkip--
         } else {
           yield item
           count++
+          if (count >= limit) return
         }
-        if (count === limit) return
       }
-
-      return
     }
 
-    let next = collection.first
-    while (next) {
-      const page = await this.#get(next)
+    // Iterate through pages in the specified order
+    while (sort === -1 ? prev : next) {
+      const page = await this.#get(sort === -1 ? prev : next)
       next = page.next
+      prev = page.prev
       items = page.orderedItems || page.items
 
       if (sort === -1) {
-        items = items.reverse() // Reverse the order for descending
+        items = items.reverse()
       }
 
       for await (const item of this.#getAll(items)) {
-        if (toSkip) {
+        if (toSkip > 0) {
           toSkip--
         } else {
           yield item
           count++
+          if (count >= limit) return
         }
-        if (count === limit) return
       }
     }
   }
