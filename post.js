@@ -106,18 +106,25 @@ class DistributedPost extends HTMLElement {
     postContent.classList.add('post-content')
 
     // Determine content source based on structure of jsonLdData
-    let contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
-    // Check if the content has a mention and update the href attribute
-    if (jsonLdData.tag && jsonLdData.tag.some(tag => tag.type === 'Mention')) {
-      console.log(jsonLdData.tag.type)
-      jsonLdData.tag.forEach(tag => {
-        if (tag.type === 'Mention') {
-          // Replace the href with the profile link
-          const regex = new RegExp(`href="${tag.href}"`, 'g')
-          contentSource = contentSource.replace(regex, `href="/profile.html?actor=${encodeURIComponent(tag.href)}"`)
-        }
-      })
-    }
+    const contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
+
+    // Sanitize content and create a DOM from it
+    const sanitizedContent = DOMPurify.sanitize(contentSource)
+    const parser = new DOMParser()
+    const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
+
+    // Process all anchor elements
+    const anchors = contentDOM.querySelectorAll('a')
+    anchors.forEach(anchor => {
+      const href = anchor.getAttribute('href')
+      // Logic to check if the href is an actor profile.
+      if (href && href.endsWith('about.jsonld')) {
+        anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
+      } else {
+        // If not recognized, keep the original href
+        anchor.setAttribute('href', href)
+      }
+    })
 
     // Determine if the content is marked as sensitive in either the direct jsonLdData or within jsonLdData.object
     const isSensitive =
@@ -163,7 +170,7 @@ class DistributedPost extends HTMLElement {
       })
     } else {
       const content = document.createElement('p')
-      content.innerHTML = DOMPurify.sanitize(contentSource)
+      content.innerHTML = contentDOM.body.innerHTML
       postContent.appendChild(content)
     }
 
