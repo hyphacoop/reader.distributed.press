@@ -222,21 +222,25 @@ export class ActivityPubDB extends EventTarget {
 
   async searchNotes (criteria, { skip = 0, limit = DEFAULT_LIMIT } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const notes = []
-    const index = criteria.attributedTo
-      ? tx.store.index('attributedTo')
-      : tx.store
+    const index = tx.store.index(PUBLISHED_FIELD)
 
-    // Use async iteration to iterate over the store or index
-    for await (const cursor of index.iterate(criteria.attributedTo)) {
-      notes.push(cursor.value)
+    const direction = 'prev' // 'prev' for descending order
+    let cursor = await index.openCursor(null, direction)
+    const notes = []
+
+    // Skip the required entries
+    for (let i = 0; i < skip && cursor; i++) {
+      cursor = await cursor.continue()
     }
 
-    // Implement additional filtering logic if needed based on other criteria (like time ranges or tags)
-    const sortedNotes = notes.sort((a, b) => b.published - a.published)
-    const paginatedNotes = sortedNotes.slice(skip, skip + limit)
+    // Collect the required limit of entries
+    for (let i = 0; i < limit && cursor; i++) {
+      notes.push(cursor.value)
+      cursor = await cursor.continue()
+    }
 
-    return paginatedNotes
+    await tx.done
+    return notes
   }
 
   async ingestActor (url) {
@@ -384,6 +388,7 @@ export class ActivityPubDB extends EventTarget {
     note.tag_names = (note.tags || []).map(({ name }) => name)
     // Try to retrieve an existing note from the database
     const existingNote = await this.db.get(NOTES_STORE, note.id)
+    console.log(existingNote)
     // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
       console.log(`Updating note with newer version: ${note.id}`)
@@ -507,6 +512,7 @@ function upgrade (db) {
     autoIncrement: false
   })
   notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
+  notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
   addRegularIndex(notes, TO_FIELD)
   addRegularIndex(notes, URL_FIELD)
   addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
