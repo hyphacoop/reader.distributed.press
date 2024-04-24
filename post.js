@@ -117,12 +117,18 @@ class DistributedPost extends HTMLElement {
     const anchors = contentDOM.querySelectorAll('a')
     anchors.forEach(anchor => {
       const href = anchor.getAttribute('href')
-      // Logic to check if the href is an actor profile.
-      if (href && href.endsWith('about.jsonld')) {
-        anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
-      } else {
-        // If not recognized, keep the original href
-        anchor.setAttribute('href', href)
+      if (href) {
+        const fediverseMatch = href.match(/^https?:\/\/([^\/]+)\/@(\w+)$/)
+        if (fediverseMatch) {
+          // If it matches the pattern, assume it's an actor profile from a Fediverse instance
+          anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
+        } else if (href.endsWith('about.jsonld')) {
+          // If it ends with 'about.jsonld', treat as a reader profile
+          anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
+        } else {
+          // If not recognized, keep the original href
+          anchor.setAttribute('href', href)
+        }
       }
     })
 
