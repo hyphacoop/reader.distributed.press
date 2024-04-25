@@ -191,6 +191,32 @@ class DistributedPost extends HTMLElement {
     fullDate.textContent = formatDate(jsonLdData.published) + ' · reader web'
     postFooter.appendChild(fullDate)
 
+    // Handle attachments of other Fedi instances
+    if (!isSensitive && !jsonLdData.summary && jsonLdData.attachment && jsonLdData.attachment.length > 0) {
+      const attachmentsContainer = document.createElement('div')
+      attachmentsContainer.className = 'attachments-container'
+
+      jsonLdData.attachment.forEach(attachment => {
+        if (attachment.mediaType.startsWith('image/')) {
+          // If it's an image
+          const img = document.createElement('img')
+          img.src = attachment.url
+          img.alt = attachment.name || 'Attached image'
+          img.className = 'attachment-image'
+          attachmentsContainer.appendChild(img)
+        } else if (attachment.mediaType.startsWith('video/')) {
+          // If it's a video
+          const video = document.createElement('video')
+          video.src = attachment.url
+          video.alt = attachment.name || 'Attached video'
+          video.className = 'attachment-video'
+          video.controls = true
+          attachmentsContainer.appendChild(video)
+        }
+      })
+      postContainer.appendChild(attachmentsContainer)
+    }
+
     // Append the footer to the post container
     postContainer.appendChild(postFooter)
 

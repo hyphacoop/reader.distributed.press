@@ -77,7 +77,7 @@
   font-size: 16px;
   color: var(--rdp-text-color);
   padding: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   overflow-wrap: break-word;
 }
 
@@ -90,6 +90,7 @@
 }
 
 .post-footer {
+  margin-top: 10px;
   font-size: 0.875rem;
   color: var(--rdp-details-color);
 }
