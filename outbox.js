@@ -160,16 +160,10 @@ class DistributedActivity extends HTMLElement {
     } else {
       postUrl = this.activityData.object
     }
-    this.displayPostContent(postUrl)
-  }
 
-  displayPostContent (url) {
-    // Clear existing content
-    this.innerHTML = ''
-
-    // Create and append the distributed-post component
+    // Create and append the distributed-post component without clearing previous content
     const distributedPostElement = document.createElement('distributed-post')
-    distributedPostElement.setAttribute('url', url)
+    distributedPostElement.setAttribute('url', postUrl)
     this.appendChild(distributedPostElement)
   }
 
@@ -192,8 +186,7 @@ class DistributedActivity extends HTMLElement {
         this.fetchAndDisplayPost()
         break
       case 'Announce':
-        // TODO: Add UI saying this was "reposted"
-        this.fetchAndDisplayPost()
+        this.displayRepostedActivity()
         break
       case 'Follow':
         this.displayFollowActivity()
@@ -205,6 +198,16 @@ class DistributedActivity extends HTMLElement {
         this.displayUnimplemented()
         break
     }
+  }
+
+  displayRepostedActivity () {
+    const actor = this.activityData.actor
+    const actorDisplayName = actor.split('/').pop().split('@').pop()
+    const repostLabel = document.createElement('p')
+    repostLabel.textContent = `Reposted by ${actorDisplayName} ⇄`
+    repostLabel.className = 'repost-label'
+    this.appendChild(repostLabel)
+    this.fetchAndDisplayPost()
   }
 
   displayFollowActivity () {
