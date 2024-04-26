@@ -2,9 +2,14 @@ let sidebarTemplateContent
 
 const response = await fetch('./sidebar.html')
 const text = await response.text()
-const parser = new DOMParser()
-const doc = parser.parseFromString(text, 'text/html')
-sidebarTemplateContent = doc.getElementById('sidebar-template').content
+const template = document.createElement('template')
+template.innerHTML = text
+
+const style = document.createElement('style')
+style.textContent = '@import url("./sidebar.css");'
+template.content.appendChild(style)
+
+sidebarTemplateContent = template.content
 
 class SidebarNav extends HTMLElement {
   constructor () {
