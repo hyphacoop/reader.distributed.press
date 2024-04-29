@@ -58,12 +58,15 @@ class ReaderTimeline extends HTMLElement {
     // Remove the button before loading more items
     this.loadMoreBtnWrapper.remove()
 
-    const notes = await db.searchNotes({}, { skip: this.skip, limit: this.limit })
-    notes.forEach(note => this.appendNoteElement(note))
+    let count = 0
+    for await (const note of db.searchNotes({}, { skip: this.skip, limit: this.limit })) {
+      count++
+      this.appendNoteElement(note)
+    }
 
     // Update skip value and determine if there are more items
     this.skip += this.limit
-    this.hasMoreItems = notes.length === this.limit
+    this.hasMoreItems = count === this.limit
 
     // Append the button at the end if there are more items
     if (this.hasMoreItems) {
