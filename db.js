@@ -220,23 +220,34 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async searchNotes (criteria, { skip = 0, limit = DEFAULT_LIMIT } = {}) {
+  async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const notes = []
-    const index = criteria.attributedTo
-      ? tx.store.index('attributedTo')
-      : tx.store
+    let count = 0
+    const direction = sort > 0 ? 'next' : 'prev' // 'prev' for descending order
+    let cursor = null
 
-    // Use async iteration to iterate over the store or index
-    for await (const cursor of index.iterate(criteria.attributedTo)) {
-      notes.push(cursor.value)
+    const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
+
+    const index = tx.store.index(indexName)
+
+    if (attributedTo) {
+      cursor = await index.openCursor([attributedTo], direction)
+    } else {
+      cursor = await index.openCursor(null, direction)
     }
 
-    // Implement additional filtering logic if needed based on other criteria (like time ranges or tags)
-    const sortedNotes = notes.sort((a, b) => b.published - a.published)
-    const paginatedNotes = sortedNotes.slice(skip, skip + limit)
+    // Skip the required entries
+    if (skip) await cursor.advance(skip)
 
-    return paginatedNotes
+    // Collect the required limit of entries
+    while (cursor) {
+      if (count >= limit) break
+      count++
+      yield cursor.value
+      cursor = await cursor.continue()
+    }
+
+    await tx.done
   }
 
   async ingestActor (url) {
@@ -384,6 +395,7 @@ export class ActivityPubDB extends EventTarget {
     note.tag_names = (note.tags || []).map(({ name }) => name)
     // Try to retrieve an existing note from the database
     const existingNote = await this.db.get(NOTES_STORE, note.id)
+    console.log(existingNote)
     // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
       console.log(`Updating note with newer version: ${note.id}`)
@@ -507,6 +519,7 @@ function upgrade (db) {
     autoIncrement: false
   })
   notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
+  notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
   addRegularIndex(notes, TO_FIELD)
   addRegularIndex(notes, URL_FIELD)
   addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
