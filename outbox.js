@@ -201,13 +201,18 @@ class DistributedActivity extends HTMLElement {
   }
 
   displayRepostedActivity () {
-    const actor = this.activityData.actor
-    const actorDisplayName = actor.split('/').pop().split('@').pop()
-    const repostLabel = document.createElement('p')
-    repostLabel.textContent = `Reposted by ${actorDisplayName} ⇄`
-    repostLabel.className = 'repost-label'
-    this.appendChild(repostLabel)
-    this.fetchAndDisplayPost()
+    const actorUrl = this.activityData.actor
+    db.getActor(actorUrl).then(actorData => {
+      const actorDisplayName = actorData.preferredUsername || actorData.name || actorUrl.split('/').pop().split('@').pop() // Fallback to URL parsing if name is unavailable
+      const repostLabel = document.createElement('p')
+      repostLabel.textContent = `Reposted by ${actorDisplayName} ⇄`
+      repostLabel.className = 'repost-label'
+      this.appendChild(repostLabel)
+      this.fetchAndDisplayPost()
+    }).catch(error => {
+      console.error('Error loading actor data:', error)
+      this.fetchAndDisplayPost() // Continue to display the post even if actor loading fails
+    })
   }
 
   displayFollowActivity () {
