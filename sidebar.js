@@ -7,7 +7,7 @@ template.innerHTML = text
 
 const style = document.createElement('style')
 style.textContent = '@import url("./sidebar.css");'
-template.content.appendChild(style)
+document.head.appendChild(style)
 
 sidebarTemplateContent = template.content
 
