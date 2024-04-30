@@ -6,7 +6,7 @@
   cursor: pointer;
 }
 
-.sidebar {
+:host  {
   position: sticky;
   top: 0;
   flex: 0 0 250px;
@@ -17,7 +17,7 @@
   overflow-y: auto;
 }
 
-.sidebar h1 {
+h1 {
   font-family: "Times New Roman", Times, serif;
   font-size: 1.8em;
   font-weight: normal;
@@ -35,30 +35,30 @@
   text-decoration: underline;
 }
 
-.sidebar nav {
+nav {
   display: flex;
   flex-direction: column;
 }
 
-.sidebar nav a {
+nav a {
   color: var(--rdp-details-color);
   text-decoration: underline;
   font-size: 0.775rem;
 }
 
-.sidebar nav a:hover {
+nav a:hover {
   text-decoration: none;
 }
 
 @media screen and (max-width: 1280px) {
-  .sidebar {
+  :host  {
     flex: 0 0 200px;
     margin-left: 14px;
   }
 }
 
 @media screen and (max-width: 768px) {
-  .sidebar {
+  :host  {
     width: 100%;
     position: fixed;
     top: 0;
@@ -69,18 +69,18 @@
     background-color: var(--bg-color);
   }
 
-  .sidebar h1 {
+  h1 {
     margin-bottom: 0.2em;
     text-align: center;
   }
 
-  .sidebar nav {
+  nav {
     text-align: center;
   }
 }
 
 @media screen and (max-width: 400px) {
-  .sidebar {
+  :host  {
     padding-bottom: 50px;
   }
 }
