@@ -250,14 +250,14 @@ export class ActivityPubDB extends EventTarget {
     await tx.done
   }
 
-  async ingestActor (url) {
+  async ingestActor (url, isInitial = false) {
     console.log(`Starting ingestion for actor from URL: ${url}`)
     const actor = await this.getActor(url)
     console.log('Actor received:', actor)
 
     // If actor has an 'outbox', ingest it as a collection
     if (actor.outbox) {
-      await this.ingestActivityCollection(actor.outbox, actor.id)
+      await this.ingestActivityCollection(actor.outbox, actor.id, isInitial)
     } else {
       console.error(`No outbox found for actor at URL ${url}`)
     }
@@ -266,13 +266,19 @@ export class ActivityPubDB extends EventTarget {
     // e.g., if (actor.followers) { ... }
   }
 
-  async ingestActivityCollection (collectionOrUrl, actorId) {
+  async ingestActivityCollection (collectionOrUrl, actorId, isInitial = false) {
     console.log(
       `Fetching collection for actor ID ${actorId}:`,
       collectionOrUrl
     )
+    const sort = isInitial ? -1 : 1
 
-    for await (const activity of this.iterateCollection(collectionOrUrl, { limit: Infinity })) {
+    const cursor = this.iterateCollection(collectionOrUrl, {
+      limit: Infinity,
+      sort
+    })
+
+    for await (const activity of cursor) {
       // Assume newest items will be first
       const wasNew = await this.ingestActivity(activity, actorId)
       if (!wasNew) {
@@ -368,15 +374,9 @@ export class ActivityPubDB extends EventTarget {
     console.log('Ingesting activity:', activity)
     await this.db.put(ACTIVITIES_STORE, activity)
 
-    if (activity.type !== TYPE_CREATE || activity.type !== TYPE_UPDATE) {
-      let note
-      if (typeof activity.object === 'string') {
-        note = await this.#get(activity.object)
-      } else {
-        note = activity.object
-      }
+    if (activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) {
+      const note = await this.#get(activity.object)
       if (note.type === TYPE_NOTE) {
-        note.id = activity.id // Use the Create activity's ID for the note ID
         console.log('Ingesting note:', note)
         await this.ingestNote(note)
       }
@@ -389,6 +389,7 @@ export class ActivityPubDB extends EventTarget {
   }
 
   async ingestNote (note) {
+    console.log('Ingesting note', note)
     // Convert needed fields to date
     note.published = new Date(note.published)
     // Add tag_names field
@@ -418,6 +419,8 @@ export class ActivityPubDB extends EventTarget {
   async followActor (url) {
     const followedAt = new Date()
     await this.db.put(FOLLOWED_ACTORS_STORE, { url, followedAt })
+
+    await this.ingestActor(url, true)
     console.log(`Followed actor: ${url} at ${followedAt}`)
     this.dispatchEvent(new CustomEvent('actorFollowed', { detail: { url, followedAt } }))
   }
