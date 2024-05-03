@@ -93,7 +93,8 @@ class DistributedPost extends HTMLElement {
 
     // Published time element
     const publishedTime = document.createElement('a')
-    publishedTime.href = `/post.html?url=${encodeURIComponent(jsonLdData.id)}`
+    const postUrl = jsonLdData.id || jsonLdData.object.id
+    publishedTime.href = `/post.html?url=${encodeURIComponent(postUrl)}`
     publishedTime.classList.add('time-ago')
     const elapsed = timeSince(jsonLdData.published)
     publishedTime.textContent = elapsed
@@ -332,9 +333,9 @@ class ActorInfo extends HTMLElement {
         let iconUrl = './assets/profile.png' // Default profile image path
         if (actorInfo.icon) {
           if (Array.isArray(actorInfo.icon) && actorInfo.icon.length > 0) {
-            iconUrl = actorInfo.icon[0].url
+            iconUrl = actorInfo.icon[0].url || actorInfo.id
           } else if (actorInfo.icon.url) {
-            iconUrl = actorInfo.icon.url
+            iconUrl = actorInfo.icon.url || actorInfo.id
           }
         }
 
