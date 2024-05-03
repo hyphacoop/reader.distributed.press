@@ -66,7 +66,7 @@ class DistributedPost extends HTMLElement {
     }
   }
 
-  renderPostContent (jsonLdData) {
+  async renderPostContent (jsonLdData) {
     // Clear existing content
     this.innerHTML = ''
 
@@ -113,20 +113,41 @@ class DistributedPost extends HTMLElement {
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
 
-    // Process all anchor elements
+    // Process all anchor elements to handle actor and posts mentions
     const anchors = contentDOM.querySelectorAll('a')
-    anchors.forEach(anchor => {
+    anchors.forEach(async (anchor) => {
       const href = anchor.getAttribute('href')
       if (href) {
-        const fediverseMatch = href.match(/^https?:\/\/([^\/]+)\/@(\w+)$/)
-        if (fediverseMatch) {
-          // If it matches the pattern, assume it's an actor profile from a Fediverse instance
+        const fediverseActorMatch = href.match(/^(https?|ipns|hyper):\/\/([^\/]+)\/@(\w+)$/)
+        const jsonldActorMatch = href.endsWith('about.jsonld')
+        const mastodonPostMatch = href.match(/^(https?|ipns|hyper):\/\/([^\/]+)\/@(\w+)\/(\d+)$/)
+        const jsonldPostMatch = href.endsWith('.jsonld')
+
+        if (fediverseActorMatch || jsonldActorMatch) {
           anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
-        } else if (href.endsWith('about.jsonld')) {
-          // If it ends with 'about.jsonld', treat as a reader profile
-          anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
+          try {
+            const actorData = await db.getActor(href)
+            if (actorData) {
+              anchor.setAttribute('href', `/profile.html?actor=${encodeURIComponent(href)}`)
+            } else {
+              console.log('Actor not found in DB, default redirection applied.')
+            }
+          } catch (error) {
+            console.error('Error fetching actor data:', error)
+          }
+        } else if (mastodonPostMatch || jsonldPostMatch) {
+          anchor.setAttribute('href', `/post.html?url=${encodeURIComponent(href)}`)
+          try {
+            const noteData = await db.getNote(href)
+            if (noteData) {
+              anchor.setAttribute('href', `/post.html?url=${encodeURIComponent(href)}`)
+            } else {
+              console.log('Post not found in DB, default redirection applied.')
+            }
+          } catch (error) {
+            console.error('Error fetching note data:', error)
+          }
         } else {
-          // If not recognized, keep the original href
           anchor.setAttribute('href', href)
         }
       }

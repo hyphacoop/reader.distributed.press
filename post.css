@@ -95,6 +95,13 @@
   color: var(--rdp-details-color);
 }
 
+.individual-post{
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+}
+
 @media (max-width: 768px) {
   .distributed-post {
     max-width: 80%;
@@ -111,5 +118,9 @@
   .actor-icon {
     width: 40px;
     height: 40px;
+  }
+
+  .individual-post{
+    margin-top: 170px;
   }
 }
