@@ -291,7 +291,7 @@ export class ActivityPubDB extends EventTarget {
   async * iterateCollection (collectionOrUrl, { skip = 0, limit = DEFAULT_LIMIT, sort = 1 } = {}) {
     const collection = await this.#get(collectionOrUrl)
 
-    let items = collection.orderedItems || collection.items
+    let items = collection.orderedItems || collection.items || []
     let next, prev
 
     if (sort === -1) {
