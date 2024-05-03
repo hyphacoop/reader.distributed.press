@@ -92,7 +92,8 @@ class DistributedPost extends HTMLElement {
     }
 
     // Published time element
-    const publishedTime = document.createElement('time')
+    const publishedTime = document.createElement('a')
+    publishedTime.href = `/post.html?url=${encodeURIComponent(jsonLdData.id)}`
     publishedTime.classList.add('time-ago')
     const elapsed = timeSince(jsonLdData.published)
     publishedTime.textContent = elapsed
@@ -204,13 +205,27 @@ class DistributedPost extends HTMLElement {
     // Append the content to the post container
     postContainer.appendChild(postContent)
 
-    // Footer of the post, which will contain the full published date and platform
+    // Footer of the post, which will contain the full published date and platform, but only the date is clickable
     const postFooter = document.createElement('footer')
     postFooter.classList.add('post-footer')
-    const fullDate = document.createElement('div')
-    fullDate.classList.add('full-date')
-    fullDate.textContent = formatDate(jsonLdData.published) + ' · reader web'
-    postFooter.appendChild(fullDate)
+
+    // Create a container for the full date and additional text
+    const dateContainer = document.createElement('div')
+
+    // Create the clickable link for the date
+    const fullDateLink = document.createElement('a')
+    fullDateLink.href = `/post.html?url=${encodeURIComponent(jsonLdData.id)}`
+    fullDateLink.classList.add('full-date')
+    fullDateLink.textContent = formatDate(jsonLdData.published)
+    dateContainer.appendChild(fullDateLink)
+
+    // Add the ' · reader web' text outside of the link
+    const readerWebText = document.createElement('span')
+    readerWebText.textContent = ' · reader web'
+    dateContainer.appendChild(readerWebText)
+
+    // Append the date container to the footer
+    postFooter.appendChild(dateContainer)
 
     // Handle attachments of other Fedi instances
     if (!isSensitive && !jsonLdData.summary && jsonLdData.attachment && jsonLdData.attachment.length > 0) {

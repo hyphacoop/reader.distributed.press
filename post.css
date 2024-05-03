@@ -61,6 +61,16 @@
   font-size: 0.875rem;
   color: var(--rdp-details-color);
 }
+.time-ago:hover{
+  text-decoration: none;
+}
+
+.full-date{
+  color: var(--rdp-details-color);
+}
+.full-date:hover{
+  text-decoration: none;
+}
 
 .cw-summary {
   color: var(--rdp-cw-color);
