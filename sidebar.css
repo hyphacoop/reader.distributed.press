@@ -6,7 +6,7 @@
   cursor: pointer;
 }
 
-:host  {
+sidebar-nav  {
   position: sticky;
   top: 0;
   flex: 0 0 250px;
@@ -51,14 +51,14 @@ nav a:hover {
 }
 
 @media screen and (max-width: 1280px) {
-  :host  {
+  sidebar-nav  {
     flex: 0 0 200px;
     margin-left: 14px;
   }
 }
 
 @media screen and (max-width: 768px) {
-  :host  {
+  sidebar-nav  {
     width: 100%;
     position: fixed;
     top: 0;
@@ -80,7 +80,7 @@ nav a:hover {
 }
 
 @media screen and (max-width: 400px) {
-  :host  {
+  sidebar-nav  {
     padding-bottom: 50px;
   }
 }
