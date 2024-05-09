@@ -250,6 +250,31 @@ export class ActivityPubDB extends EventTarget {
     await tx.done
   }
 
+  async * searchNotesRandom ({ limit = DEFAULT_LIMIT } = {}) {
+    const tx = this.db.transaction(NOTES_STORE, 'readonly')
+    const store = tx.objectStore(NOTES_STORE)
+    const totalNotes = await store.count()
+
+    for (let i = 0; i < limit; i++) {
+      const randomSkip = Math.floor(Math.random() * totalNotes)
+      let cursor = await store.openCursor()
+      if (cursor) {
+        if (randomSkip > 0) { // Only advance if randomSkip is greater than 0
+          await cursor.advance(randomSkip)
+          if (cursor) {
+            yield cursor.value
+            cursor = await cursor.continue()
+          }
+        } else {
+          // If randomSkip is 0, yield the first item directly
+          yield cursor.value
+          cursor = await cursor.continue() // Continue to the next for proper iteration
+        }
+      }
+    }
+    await tx.done
+  }
+
   async ingestActor (url, isInitial = false) {
     console.log(`Starting ingestion for actor from URL: ${url}`)
     const actor = await this.getActor(url)

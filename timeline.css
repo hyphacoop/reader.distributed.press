@@ -9,6 +9,35 @@ body {
   background: var(--bg-color);
 }
 
+.reader-container {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sort-container {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.sort-container label {
+  color: var(--rdp-text-color);
+  font-size: 0.875rem;
+  margin-right: 4px;
+  display: flex;
+  align-items: center;
+  margin-left: 48px;
+}
+
+.sort-dropdown {
+  padding: 2px;
+  border: 1px solid var(--rdp-border-color);
+  border-radius: 4px;
+  width: 75px;
+}
+
 reader-timeline {
   flex: 1;
   max-width: 600px;
@@ -17,9 +46,12 @@ reader-timeline {
 }
 
 @media screen and (max-width: 768px) {
+  .reader-container {
+    margin-top: 160px;
+  }
+
   reader-timeline {
     width: 100%;
     max-width: 100%;
-    margin-top: 150px;
   }
 }

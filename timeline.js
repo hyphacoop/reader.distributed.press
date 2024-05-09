@@ -6,12 +6,15 @@ class ReaderTimeline extends HTMLElement {
   skip = 0
   limit = 32
   hasMoreItems = true
+  sort = 'latest'
   loadMoreBtn = null
+  randomNotes = [] // Cache for random notes
+  randomIndex = 0 // Current index in the random notes cache
 
   constructor () {
     super()
     this.loadMoreBtn = document.createElement('button')
-    this.loadMoreBtn.textContent = 'Load More..'
+    this.loadMoreBtn.textContent = 'Load More...'
     this.loadMoreBtn.className = 'load-more-btn'
 
     this.loadMoreBtnWrapper = document.createElement('div')
@@ -22,7 +25,40 @@ class ReaderTimeline extends HTMLElement {
   }
 
   connectedCallback () {
+    this.initializeSortOrder()
     this.initializeDefaultFollowedActors().then(() => this.initTimeline())
+  }
+
+  initializeSortOrder () {
+    const params = new URLSearchParams(window.location.search)
+    this.sort = params.get('sort') || 'latest'
+
+    const sortOrderSelect = document.getElementById('sortOrder')
+    if (sortOrderSelect) {
+      sortOrderSelect.value = this.sort
+      sortOrderSelect.addEventListener('change', (event) => {
+        this.sort = event.target.value
+        this.updateURL()
+        this.resetTimeline()
+      })
+    }
+  }
+
+  updateURL () {
+    const url = new URL(window.location)
+    url.searchParams.set('sort', this.sort)
+    window.history.pushState({}, '', url)
+  }
+
+  async resetTimeline () {
+    this.skip = 0
+    this.randomIndex = 0
+    this.randomNotes = []
+    this.hasMoreItems = true
+    while (this.firstChild) {
+      this.removeChild(this.firstChild)
+    }
+    this.loadMore()
   }
 
   async initializeDefaultFollowedActors () {
@@ -35,14 +71,9 @@ class ReaderTimeline extends HTMLElement {
       // "https://staticpub.mauve.moe/about.jsonld",
     ]
 
-    // Check if followed actors have already been initialized
     const hasFollowedActors = await db.hasFollowedActors()
     if (!hasFollowedActors) {
-      await Promise.all(
-        defaultActors.map(async (actorUrl) => {
-          await db.followActor(actorUrl)
-        })
-      )
+      await Promise.all(defaultActors.map(actorUrl => db.followActor(actorUrl)))
     }
   }
 
@@ -56,20 +87,52 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async loadMore () {
-    // Remove the button before loading more items
     this.loadMoreBtnWrapper.remove()
-
     let count = 0
-    for await (const note of db.searchNotes({}, { skip: this.skip, limit: this.limit })) {
-      count++
-      this.appendNoteElement(note)
+
+    if (this.sort === 'random' && this.randomNotes.length === 0) {
+      const allNotes = []
+      for await (const note of db.searchNotesRandom(this.limit)) {
+        allNotes.push(note)
+      }
+      this.randomNotes = allNotes.sort(() => Math.random() - 0.5)
     }
 
-    // Update skip value and determine if there are more items
-    this.skip += this.limit
-    this.hasMoreItems = count === this.limit
+    const notesToShow = this.sort === 'random'
+      ? this.randomNotes.slice(this.randomIndex, this.randomIndex + this.limit)
+      : await this.fetchSortedNotes()
 
-    // Append the button at the end if there are more items
+    for (const note of notesToShow) {
+      if (note) {
+        this.appendNoteElement(note)
+        count++
+      }
+    }
+
+    this.updateIndexes(count)
+    this.appendLoadMoreIfNeeded()
+  }
+
+  async fetchSortedNotes () {
+    const notesGenerator = db.searchNotes({}, { skip: this.skip, limit: this.limit, sort: this.sort === 'oldest' ? 1 : -1 })
+    const notes = []
+    for await (const note of notesGenerator) {
+      notes.push(note)
+    }
+    return notes
+  }
+
+  updateIndexes (count) {
+    if (this.sort === 'random') {
+      this.randomIndex += this.limit
+      this.hasMoreItems = this.randomIndex < this.randomNotes.length
+    } else {
+      this.skip += this.limit
+      this.hasMoreItems = count === this.limit
+    }
+  }
+
+  appendLoadMoreIfNeeded () {
     if (this.hasMoreItems) {
       this.appendChild(this.loadMoreBtnWrapper)
     }
