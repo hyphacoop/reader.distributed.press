@@ -40,6 +40,7 @@ function timeSince (dateString) {
 }
 
 function fetchLink (data) {
+  if (typeof data === 'string') return data
   const { url, id } = data
 
   if (!url) return id
@@ -84,6 +85,12 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = ''
 
+    // Check if jsonLdData is an activity instead of a note
+    if ('object' in jsonLdData) {
+      this.renderErrorContent('Expected a Note but received an Activity')
+      return
+    }
+
     // Create the container for the post
     const postContainer = document.createElement('div')
     postContainer.classList.add('distributed-post')
@@ -107,7 +114,7 @@ class DistributedPost extends HTMLElement {
 
     // Published time element
     const publishedTime = document.createElement('a')
-    const postUrl = fetchLink({ url: jsonLdData.id || jsonLdData.object.id, id: jsonLdData.id || jsonLdData.object.id })
+    const postUrl = fetchLink(jsonLdData.id)
     publishedTime.href = `/post.html?url=${encodeURIComponent(postUrl)}`
     publishedTime.classList.add('time-ago')
     const elapsed = timeSince(jsonLdData.published)
