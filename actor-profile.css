@@ -1,0 +1,101 @@
+.profile {
+  margin-top: 20px;
+}
+
+.profile-container {
+  text-align: center;
+}
+
+.distributed-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.profile-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #000000;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  color: var(--rdp-text-color);
+  font-weight: bold;
+}
+
+.profile-username {
+  color: var(--rdp-text-color);
+  margin-top: 1px;
+}
+
+.profile-summary {
+  color: var(--rdp-details-color);
+  width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 8px;
+  margin-bottom: 10px;
+  overflow-wrap: break-word;
+}
+
+follow-button {
+  appearance: none;
+  border: 1px solid var(--rdp-border-color);
+  border-radius: 4px;
+  box-shadow: rgba(27, 31, 35, 0.1) 0 1px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-block;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 4px 16px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+follow-button[state="follow"],
+follow-button[state="unfollow"] {
+  color: #fff;
+}
+
+follow-button[state="follow"] {
+  background-color: #3b82f6;
+}
+follow-button[state="follow"]:hover {
+  background-color: #2563eb;
+}
+
+follow-button[state="unfollow"] {
+  background-color: #ef4444;
+}
+follow-button[state="unfollow"]:hover {
+  background-color: #dc2626;
+}
+
+.actor-profile {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .profile-summary {
+    width: 100%;
+  }
+}

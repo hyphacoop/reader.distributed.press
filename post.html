@@ -1,20 +1,26 @@
 <!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Reader Post</title>
 <style>
+  @import url("./index.css");
+  @import url("./common.css");
+  @import url("./theme.css");
+  @import url("./timeline.css");
   @import url("./post.css");
 </style>
-<div id="post-container">
-  <!-- https://staticpub.mauve.moe/helloworld.html -->
-  <!-- hyper://staticpub.mauve.moe/helloworld.html -->
-  <!-- ipfs://bafybeifslnipwp5uanmhkckokwuse7h5gfrrjzqq4jg5oxewxbzrdcdawu -->
-  <distributed-post id="distributedPost"></distributed-post>
+<div class="container">
+  <sidebar-nav></sidebar-nav>
+  <div class="individual-post">
+    <distributed-post id="distributedPost"></distributed-post>
+  </div>
+  <div class="right-column">
+    <!-- This is an empty column to balance the layout -->
+  </div>
 </div>
-
-<script type="module" src="./post.js"></script>
-<!-- Dynamically set post URL from query string parameter -->
-<script>
+<script type="module">
   const params = new URLSearchParams(window.location.search);
-  const postUrl = params.get("url");
+  const postUrl = params.get("url") || "ipns://hypha.coop/dripline/announcing-dp-social-inbox.ipns.jsonld";
 
   if (postUrl) {
     const postElement = document.getElementById("distributedPost");
@@ -23,3 +29,10 @@
     console.error("URL parameter is missing");
   }
 </script>
+<script type="module" src="./dbInstance.js"></script>
+<script type="module" src="./sidebar.js"></script>
+<script type="module" src="./timeline.js"></script>
+<script type="module" src="./post.js"></script>
+<script type="module" src="./followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>
+<script type="module" src="./error-message.js"></script>

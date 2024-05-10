@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>User Profile</title>
+<style>
+  @import url("./actor-profile.css");
+  @import url("./common.css");
+  @import url("./index.css");
+  @import url("./theme.css");
+  @import url("./timeline.css");
+  @import url("./outbox.css");
+  @import url("./post.css");
+</style>
+<div class="container">
+  <sidebar-nav></sidebar-nav>
+  <div class="actor-profile main-content">
+    <actor-profile></actor-profile>
+    <distributed-outbox></distributed-outbox>
+  </div>
+  <div class="right-column">
+    <!-- This is an empty column to balance the layout -->
+  </div>
+</div>
+<script>
+  // Pagination controls
+  document.addEventListener("outboxUpdated", () => {
+    const outboxElement = document.querySelector("distributed-outbox");
+    const prevButton = document.getElementById("prevPage");
+    const nextButton = document.getElementById("nextPage");
+
+    if (prevButton) {
+      prevButton.addEventListener("click", () => outboxElement.prevPage());
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", () => outboxElement.nextPage());
+    }
+  });
+
+  // Get actor url
+  const params = new URLSearchParams(window.location.search);
+  const actorUrl = params.get("actor");
+
+  if (actorUrl) {
+    const actorProfile = document.querySelector("actor-profile");
+    actorProfile.setAttribute("url", actorUrl);
+  } else {
+    console.error("Actor URL not specified in the query string.");
+  }
+</script>
+<script type="module" src="./sidebar.js"></script>
+<script type="module" src="./actor-profile.js"></script>
+<script type="module" src="./post.js"></script>
+<script type="module" src="./outbox.js"></script>
+<script type="module" src="./followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>
+<script type="module" src="./error-message.js"></script>

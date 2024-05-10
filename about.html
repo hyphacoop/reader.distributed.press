@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About Reader</title>
+<style>
+  @import url("./about.css");
+  @import url("./common.css");
+  @import url("./theme.css");
+  @import url("./index.css");
+  @import url("./timeline.css");
+  @import url("./post.css");
+</style>
+<div class="container">
+  <sidebar-nav></sidebar-nav>
+  <section class="about-container main-content">
+    <section class="about-info">
+      <p>
+        Social Reader is a P2P and offline ActivityPub client for reading and
+        following microblogs on the
+        <a href="https://en.wikipedia.org/wiki/Fediverse">Fediverse</a>.
+      </p>
+      <p>
+        Unlike traditional platforms, Social Reader does not index data on a
+        server. It empowers you to load public ActivityPub data directly,
+        turning your device into a personal indexer. This means
+        <b>your content, your control</b>.
+      </p>
+      <p>
+        Social Reader natively supports content loading over P2P protocols such
+        as
+        <code><a href="https://ipfs.tech/">ipfs://</a></code> and
+        <code><a href="https://holepunch.to/">hyper://</a></code
+        >. This innovation bypasses the need for always-online HTTP servers,
+        allowing you to access content anytime, anywhere—even offline.
+      </p>
+      <p>
+        Social Reader is built on principles of low-tech; minimal dependencies,
+        vanilla JavaScript, unminified scripts, and IndexedDB for local data
+        storage. View and contribute to our open-source code on
+        <a href="https://github.com/hyphacoop/reader.distributed.press"
+          >GitHub</a
+        >.
+      </p>
+    </section>
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <h2>FAQs</h2>
+      <details open>
+        <summary>How do I create an account on Social Reader?</summary>
+        <p>
+          Social Reader is designed as a reading and following client, which
+          means you cannot create an account directly within the app. To
+          actively write and contribute to the Fediverse, you would need to
+          interact with the
+          <a href="https://hypha.coop/dripline/announcing-dp-social-inbox/"
+            >Social Inbox</a
+          >
+          API. This can be done through platforms like
+          <a href="https://sutty.nl/">Sutty CMS</a> or by forking and hosting
+          your own instance of
+          <a href="https://github.com/RangerMauve/staticpub.mauve.moe"
+            >Staticpub</a
+          >
+          repository.
+        </p>
+      </details>
+      <details>
+        <summary>
+          Why is Social Reader different from mainstream social platforms?
+        </summary>
+        <p>
+          Social Reader eliminates the middleman, ensuring direct communication
+          with your audience without the interference of third-party algorithms.
+          This ad-free experience prioritizes user autonomy and engagement,
+          making it ideal for community leaders and organizations seeking
+          genuine reach and engagement. Unlike traditional social networks where
+          follower engagement often requires payment, Social Reader and the
+          broader Fediverse allow for genuine reach and engagement.
+        </p>
+      </details>
+      <details>
+        <summary>I found a bug. Where do I report it?</summary>
+        <p>
+          If you encounter any issues or have feedback, please file a report on
+          our
+          <a
+            href="https://github.com/hyphacoop/reader.distributed.press/issues/new"
+            >GitHub issues</a
+          >
+          page. We appreciate your input as it helps us improve Social Reader
+          for everyone.
+        </p>
+      </details>
+    </section>
+  </section>
+  <div class="right-column">
+    <!-- This is an empty column to balance the layout -->
+  </div>
+</div>
+<script type="module" src="./sidebar.js"></script>
+<script type="module" src="followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>

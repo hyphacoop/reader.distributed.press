@@ -1,3 +1,3 @@
-import { ActivityPubDB } from "./db.js";
+import { ActivityPubDB } from './db.js'
 
-export const db = await ActivityPubDB.load();
+export const db = await ActivityPubDB.load()
