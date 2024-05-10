@@ -1,0 +1,7 @@
+distributed-search form {
+    display: flex;
+}
+
+distributed-search input {
+    width: 8em;
+}

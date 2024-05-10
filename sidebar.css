@@ -1,7 +1,7 @@
-.header-branding {
+sidebar-nav .header-branding {
   color: var(--rdp-text-color);
 }
-.home-page-link {
+sidebar-nav .home-page-link {
   text-decoration: none;
   cursor: pointer;
 }
@@ -17,36 +17,36 @@ sidebar-nav  {
   overflow-y: auto;
 }
 
-h1 {
+sidebar-nav h1 {
   font-family: "Times New Roman", Times, serif;
   font-size: 1.8em;
   font-weight: normal;
   margin-bottom: 0.6em;
 }
 
-.controls a {
+sidebar-nav .controls a {
   color: var(--rdp-text-color);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: bold;
   margin-bottom: 0.4em;
 }
-.controls a:hover {
+sidebar-nav .controls a:hover {
   text-decoration: underline;
 }
 
-nav {
+sidebar-nav nav {
   display: flex;
   flex-direction: column;
 }
 
-nav a {
+sidebar-nav nav a {
   color: var(--rdp-details-color);
   text-decoration: underline;
   font-size: 0.775rem;
 }
 
-nav a:hover {
+sidebar-nav nav a:hover {
   text-decoration: none;
 }
 
@@ -69,12 +69,12 @@ nav a:hover {
     background-color: var(--bg-color);
   }
 
-  h1 {
+  sidebar-nav h1 {
     margin-bottom: 0.2em;
     text-align: center;
   }
 
-  nav {
+  sidebar-nav nav {
     text-align: center;
   }
 }

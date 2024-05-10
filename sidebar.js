@@ -1,4 +1,4 @@
-let sidebarTemplateContent
+import "./search.js"
 
 const response = await fetch('./sidebar.html')
 const text = await response.text()
@@ -9,23 +9,15 @@ const style = document.createElement('style')
 style.textContent = '@import url("./sidebar.css");'
 document.head.appendChild(style)
 
-sidebarTemplateContent = template.content
-
 class SidebarNav extends HTMLElement {
   constructor () {
     super()
-    this.attachShadow({ mode: 'open' })
-    this.initSidebar()
+    this.init()
   }
 
-  initSidebar () {
-    const instance = sidebarTemplateContent.cloneNode(true)
-    this.shadowRoot.appendChild(instance)
-
-    // Attach the sidebar.css styles
-    const style = document.createElement('style')
-    style.textContent = '@import url("./sidebar.css");'
-    this.shadowRoot.appendChild(style)
+  init () {
+    const instance = template.content.cloneNode(true)
+    this.appendChild(instance)
   }
 }
 

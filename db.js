@@ -57,6 +57,26 @@ export class ActivityPubDB extends EventTarget {
     return new ActivityPubDB(db, fetch)
   }
 
+  resolveURL (url) {
+    // TODO: Check if mention
+    return this.#get(url)
+  }
+
+  getObjectPage (data) {
+    if (typeof data === 'string') return data
+    const { url, id } = data
+
+    if (!url) return id
+    if (typeof url === 'string') return url
+    if (Array.isArray(url)) {
+      const firstLink = url.find((item) => (typeof item === 'string') || item.href)
+      if (firstLink) return firstLink.href || firstLink
+    } else if (url.href) {
+      return url.href
+    }
+    return id
+  }
+
   #fetch (...args) {
     const { fetch } = this
     return fetch(...args)
@@ -83,57 +103,13 @@ export class ActivityPubDB extends EventTarget {
     if (url && typeof url === 'object') {
       return url
     }
-
-    /* TODO: Incorporate this logic
-
-    const headers = new Headers({ Accept: ACCEPT_HEADER });
-
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (
-      contentType.includes("application/ld+json") ||
-      contentType.includes("application/activity+json") ||
-      contentType.includes("application/json")
-    ) {
-      // Directly return JSON-LD if the response is JSON-LD or ActivityPub type
-      return await response.json();
-    } else if (contentType.includes("text/html")) {
-      // For HTML responses, look for the link in the HTTP headers
-      const linkHeader = response.headers.get("Link");
-      if (linkHeader) {
-        const matches = linkHeader.match(
-          /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
-        );
-        if (matches && matches[1]) {
-          // Found JSON-LD link in headers, fetch that URL
-          return fetchJsonLd(matches[1]);
-        }
-      }
-      // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
-      const htmlContent = await response.text();
-      const jsonLdUrl = await parsePostHtml(htmlContent);
-      if (jsonLdUrl) {
-        // Found JSON-LD link in HTML, fetch that URL
-        return fetchJsonLd(jsonLdUrl);
-      }
-      // No JSON-LD link found in HTML
-      throw new Error("No JSON-LD link found in the response");
-    }
-    */
-
-    // TODO: Resolve html with link tags
-
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch
     try {
       response = await this.#fetch(url, {
         headers: {
-          Accept: 'application/json'
+          Accept: ACCEPT_HEADER
         }
       })
     } catch (error) {
@@ -141,14 +117,14 @@ export class ActivityPubDB extends EventTarget {
         // Maybe the browser can't load p2p URLs
         response = await this.#gateWayFetch(url, {
           headers: {
-            Accept: 'application/json'
+            Accept: ACCEPT_HEADER
           }
         })
       } else {
         // Try the proxy, maybe it's cors?
         response = await this.#proxiedFetch(url, {
           headers: {
-            Accept: 'application/json'
+            Accept: ACCEPT_HEADER
           }
         })
       }
@@ -156,6 +132,12 @@ export class ActivityPubDB extends EventTarget {
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}.\n${url}\n${await response.text()}`)
+    }
+    if (isResponseHTML(response)) {
+      const jsonLdUrl = await getResponseLink(response)
+      if (jsonLdUrl) return this.#get(jsonLdUrl)
+      // No JSON-LD link found in HTML
+      throw new Error('No JSON-LD link found in the response')
     }
 
     return await response.json()
@@ -550,9 +532,40 @@ function upgrade (db) {
   db.createObjectStore('settings', { keyPath: 'key' })
 }
 
+// TODO: prefer p2p alternate links when possible
+async function getResponseLink (response) {
+// For HTML responses, look for the link in the HTTP headers
+  const linkHeader = response.headers.get('Link')
+  if (linkHeader) {
+    const matches = linkHeader.match(
+      /<([^>]+)>;\s*rel="alternate";\s*type="application\/ld\+json"/
+    )
+    if (matches && matches[1]) {
+    // Found JSON-LD link in headers, fetch that URL
+      return matches[1]
+    }
+  }
+  // If no link header or alternate JSON-LD link is found, or response is HTML without JSON-LD link, process as HTML
+  const htmlContent = await response.text()
+  const jsonLdUrl = await parsePostHtml(htmlContent)
+
+  return jsonLdUrl
+}
+
 async function parsePostHtml (htmlContent) {
   const parser = new DOMParser()
   const doc = parser.parseFromString(htmlContent, 'text/html')
-  const alternateLink = doc.querySelector('link[rel="alternate"]')
-  return alternateLink ? alternateLink.href : null
+  const alternateLinks = doc.querySelectorAll('link[rel="alternate"]')
+  console.log(...alternateLinks)
+  for (const link of alternateLinks) {
+    if (!link.type) continue
+    if (link.type.includes('application/ld+json') || link.type.includes('application/activity+json')) {
+      return link.href
+    }
+  }
+  return null
+}
+
+function isResponseHTML (response) {
+  return response.headers.get('content-type').includes('text/html')
 }

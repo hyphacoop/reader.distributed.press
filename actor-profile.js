@@ -50,6 +50,7 @@ class ActorProfile extends HTMLElement {
       }
     }
 
+
     const img = document.createElement('img')
     img.classList.add('profile-icon')
     img.src = iconUrl
@@ -64,8 +65,9 @@ class ActorProfile extends HTMLElement {
     }
 
     if (actorInfo.preferredUsername) {
-      const pUserName = document.createElement('div')
+      const pUserName = document.createElement('a')
       pUserName.classList.add('profile-username')
+      pUserName.href = db.getObjectPage(actorInfo)
       pUserName.textContent = `@${actorInfo.preferredUsername}`
       actorContainer.appendChild(pUserName) // Append to the actor container
     }
