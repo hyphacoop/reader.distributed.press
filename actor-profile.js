@@ -50,7 +50,6 @@ class ActorProfile extends HTMLElement {
       }
     }
 
-
     const img = document.createElement('img')
     img.classList.add('profile-icon')
     img.src = iconUrl

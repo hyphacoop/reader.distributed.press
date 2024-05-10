@@ -63,7 +63,7 @@ sidebar-nav nav a:hover {
     position: fixed;
     top: 0;
     z-index: 100;
-    max-height: calc(100vh - 82vh);
+    max-height: calc(100vh - 78vh);
     overflow-y: auto;
     align-items: center;
     background-color: var(--bg-color);

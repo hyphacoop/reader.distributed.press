@@ -1,4 +1,4 @@
-import "./search.js"
+import './search.js'
 
 const response = await fetch('./sidebar.html')
 const text = await response.text()

@@ -99,7 +99,7 @@ class DistributedPost extends HTMLElement {
 
     // Published time element
     const publishedTime = document.createElement('a')
-    publishedTime.href = db.getObjectPage(jsonLdData)
+    publishedTime.href = `/post.html?url=${encodeURIComponent(db.getObjectPage(jsonLdData))}`
     publishedTime.classList.add('time-ago')
     const elapsed = timeSince(jsonLdData.published)
     publishedTime.textContent = elapsed
