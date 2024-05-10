@@ -1,0 +1,136 @@
+/* Vars */
+:root {
+  --rdp-font: "Arial", sans-serif;
+  --rdp-bg-color: #ebf3f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #f87171;
+  --rdp-link-color: #0ea5e9;
+  --rdp-details-color: #4d626a;
+  --rdp-border-color: #cccccc;
+  --rdp-border-radius: 6px;
+}
+
+/* Component styles */
+.distributed-post {
+  background: var(--rdp-bg-color);
+  border: 1px solid var(--rdp-border-color);
+  border-radius: var(--rdp-border-radius);
+  padding: 16px;
+  max-width: 500px;
+  margin: 16px auto;
+}
+
+.distributed-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.distributed-post-author {
+  display: flex;
+  align-items: center;
+}
+
+.actor-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #000000;
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.actor-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.actor-name {
+  color: var(--rdp-text-color);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.actor-username {
+  color: var(--rdp-details-color);
+  margin-top: 1px;
+}
+
+.time-ago {
+  font-size: 0.875rem;
+  color: var(--rdp-details-color);
+}
+.time-ago:hover{
+  text-decoration: none;
+}
+
+.full-date{
+  color: var(--rdp-details-color);
+}
+.full-date:hover{
+  text-decoration: none;
+}
+
+.cw-summary {
+  color: var(--rdp-cw-color);
+}
+
+.see-more-toggle {
+  color: var(--rdp-details-color);
+  font-size: 0.725em;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+.post-content {
+  font-size: 16px;
+  color: var(--rdp-text-color);
+  padding: 6px;
+  margin-bottom: 10px;
+  overflow-wrap: break-word;
+}
+
+.post-content a{
+  color: var(--rdp-link-color);
+  text-decoration: underline;
+}
+.post-content a:hover{
+  text-decoration: none;
+}
+
+.post-footer {
+  margin-top: 10px;
+  font-size: 0.875rem;
+  color: var(--rdp-details-color);
+}
+
+.individual-post{
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .distributed-post {
+    max-width: 80%;
+    padding: 12px;
+    margin: 8px auto;
+  }
+
+  .post-content,
+  .post-footer,
+  .time-ago {
+    font-size: 0.875rem;
+  }
+
+  .actor-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .individual-post{
+    margin-top: 170px;
+  }
+}

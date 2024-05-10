@@ -1,0 +1,13 @@
+/* Vars */
+:root {
+  --bg-color: #ffffff;
+}
+
+/* Main styles */
+html {
+  background: var(--bg-color);
+}
+
+* {
+  box-sizing: border-box;
+}

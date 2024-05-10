@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<title>Reader Post</title>
+<style>
+  @import url("../post.css");
+  @import url("../common.css");
+</style>
+<div id="post-container">
+  <!-- https://staticpub.mauve.moe/helloworld.html -->
+  <!-- hyper://staticpub.mauve.moe/helloworld.html -->
+  <!-- ipfs://bafybeifslnipwp5uanmhkckokwuse7h5gfrrjzqq4jg5oxewxbzrdcdawu -->
+  <distributed-post id="distributedPost"></distributed-post>
+</div>
+
+<script type="module" src="../post.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  // Fallback to a default URL for testing if the parameter is not available
+  const defaultPostUrl = "ipns://hypha.coop/dripline/announcing-dp-social-inbox.ipns.jsonld";
+  const postUrl = params.get("url") || defaultPostUrl;
+
+  if (postUrl) {
+    const postElement = document.getElementById("distributedPost");
+    postElement.setAttribute("url", postUrl);
+  } else {
+    console.error("URL parameter is missing");
+  }
+</script>
+<script type="module" src="../error-message.js"></script>

@@ -1,0 +1,36 @@
+.about-container {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 20px;
+  margin-top: 10px;
+}
+
+/* Apply general styles to all section elements within about-container */
+.about-container > section {
+  text-align: left;
+  color: var(--rdp-text-color);
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.about-info a,
+.faq-section a {
+  color: var(--rdp-link-color);
+  text-decoration: underline;
+}
+
+.about-info a:hover,
+.faq-section a:hover {
+  text-decoration: none;
+}
+
+.faq-section details {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--rdp-border-color);
+  padding-bottom: 1rem;
+}
+
+.faq-section summary {
+  font-weight: bold;
+}

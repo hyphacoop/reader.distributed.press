@@ -1,13 +1,38 @@
 <!DOCTYPE html>
-<title>Distributed Press Reader</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reader Post</title>
 <style>
-	@import url("./style.css")
+  @import url("./index.css");
+  @import url("./common.css");
+  @import url("./theme.css");
+  @import url("./timeline.css");
+  @import url("./post.css");
 </style>
+<div class="container">
+  <sidebar-nav></sidebar-nav>
+  <div class="individual-post">
+    <distributed-post id="distributedPost"></distributed-post>
+  </div>
+  <div class="right-column">
+    <!-- This is an empty column to balance the layout -->
+  </div>
+</div>
+<script type="module">
+  const params = new URLSearchParams(window.location.search);
+  const postUrl = params.get("url") || "ipns://hypha.coop/dripline/announcing-dp-social-inbox.ipns.jsonld";
 
-- TODO:
-- Load post from `window.location.searchParams.get("url")`
-- Fetch json
-- render content
-- fetch actor info and render it
-- refactor into reusable web component that takes the url as an attribute.
-- factor out the avatar/profile name rendering into a separate component that gets nested
+  if (postUrl) {
+    const postElement = document.getElementById("distributedPost");
+    postElement.setAttribute("url", postUrl);
+  } else {
+    console.error("URL parameter is missing");
+  }
+</script>
+<script type="module" src="./dbInstance.js"></script>
+<script type="module" src="./sidebar.js"></script>
+<script type="module" src="./timeline.js"></script>
+<script type="module" src="./post.js"></script>
+<script type="module" src="./followed-accounts.js"></script>
+<script type="module" src="./theme-selector.js"></script>
+<script type="module" src="./error-message.js"></script>

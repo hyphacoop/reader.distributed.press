@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Followed Accounts</title>
+<style>
+  @import url("./followed-accounts.css");
+  @import url("./actor-mini-profile.css");
+  @import url("./common.css");
+  @import url("./theme.css");
+  @import url("./index.css");
+  @import url("./timeline.css");
+  @import url("./post.css");
+</style>
+<div class="container">
+  <sidebar-nav></sidebar-nav>
+  <div class="followed-container main-content">
+    <p>
+      You're following
+      <b> <followed-count id="followCount"></followed-count> accounts </b>on the
+      fediverse.<br />
+      <span
+        >To sync your list of followed accounts across multiple devices, be sure
+        to ⬆️ export your followed list from one device and 📥 import it on the
+        other.</span
+      >
+    </p>
+    <div class="imp-exp-btn">
+      <button id="exportFollowedList">Export</button>
+      <button id="importFollowedList">Import</button>
+      <input type="file" id="fileInput" style="display: none" accept=".json" />
+    </div>
+    <followed-actors-list></followed-actors-list>
+    <span class="cache-warning-msg"
+      >⚠️ Before clearing your browser's cache, ensure you export your followed
+      list.</span
+    >
+  </div>
+  <div class="right-column">
+    <!-- This is an empty column to balance the layout -->
+  </div>
+</div>
+<script type="module">
+  import { FollowedActorsList } from './followed-accounts.js';
+
+  const exportBtn = document.getElementById("exportFollowedList");
+  const importBtn = document.getElementById("importFollowedList");
+  const fileInput = document.getElementById("fileInput");
+
+  exportBtn.addEventListener("click", FollowedActorsList.exportFollowedList);
+
+  importBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", function () {
+    if (this.files[0]) {
+      FollowedActorsList.importFollowedList(this.files[0]);
+      this.value = ""; // Clear the file input after importing
+    }
+  });
+</script>
+<script type="module" src="./sidebar.js"></script>
+<script type="module" src="./followed-accounts.js"></script>
+<script type="module" src="./actor-mini-profile.js"></script>
+<script type="module" src="./theme-selector.js"></script>

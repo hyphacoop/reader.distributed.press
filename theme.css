@@ -1,0 +1,124 @@
+:root[data-theme="light"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #ebf3f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #f87171;
+  --rdp-link-color: #0ea5e9;
+  --rdp-details-color: #4d626a;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="dark"] {
+  --bg-color: #18181b;
+  --rdp-bg-color: #27272a;
+  --rdp-text-color: #d1d5db;
+  --rdp-cw-color: #f87171;
+  --rdp-link-color: #0ea5e9;
+  --rdp-details-color: #94a3b8;
+  --rdp-border-color: #71717a;
+}
+
+:root[data-theme="deuteranomaly"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #ebf3f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #d09b6b;
+  --rdp-link-color: #3faae9;
+  --rdp-details-color: #4d626a;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="protanomaly"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #ebf3f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #c38473;
+  --rdp-link-color: #3ba5e9;
+  --rdp-details-color: #5b636c;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="deuteranopia"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #f0f0f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #b0b067;
+  --rdp-link-color: #9190ea;
+  --rdp-details-color: #5c5b6a;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="protanopia"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #f2f2f5;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #8e8e74;
+  --rdp-link-color: #9e9de8;
+  --rdp-details-color: #60606a;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="tritanopia"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #ebf3f3;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #f5716e;
+  --rdp-link-color: #3cb0b0;
+  --rdp-details-color: #5b7070;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="tritanomaly"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #ebf3f4;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #f5716f;
+  --rdp-link-color: #40b6d0;
+  --rdp-details-color: #4c6365;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="achromatopsia"] {
+  --bg-color: #ffffff;
+  --rdp-bg-color: #f0f0f0;
+  --rdp-text-color: #000000;
+  --rdp-cw-color: #9e9e9e;
+  --rdp-link-color: #8d8d8d;
+  --rdp-details-color: #5b5b5b;
+  --rdp-border-color: #cccccc;
+}
+
+:root[data-theme="deuteranomaly"] img,
+:root[data-theme="deuteranomaly"] video {
+  filter: url(#deuteranomaly);
+}
+
+:root[data-theme="protanomaly"] img,
+:root[data-theme="protanomaly"] video {
+  filter: url(#protanomaly);
+}
+
+:root[data-theme="deuteranopia"] img,
+:root[data-theme="deuteranopia"] video {
+  filter: url(#deuteranopia);
+}
+
+:root[data-theme="protanopia"] img,
+:root[data-theme="protanopia"] video {
+  filter: url(#protanopia);
+}
+
+:root[data-theme="tritanopia"] img,
+:root[data-theme="tritanopia"] video {
+  filter: url(#tritanopia);
+}
+
+:root[data-theme="tritanomaly"] img,
+:root[data-theme="tritanomaly"] video {
+  filter: url(#tritanomaly);
+}
+
+:root[data-theme="achromatopsia"] img,
+:root[data-theme="achromatopsia"] video {
+  filter: url(#achromatopsia);
+}
