@@ -255,20 +255,23 @@ export class ActivityPubDB extends EventTarget {
     const store = tx.objectStore(NOTES_STORE)
     const totalNotes = await store.count()
 
-    for (let i = 0; i < limit; i++) {
+    if (totalNotes === 0) return // Early exit if no notes are present
+
+    let cursor = await store.openCursor()
+    const uniqueIndexes = new Set()
+
+    while (uniqueIndexes.size < limit && uniqueIndexes.size < totalNotes) {
       const randomSkip = Math.floor(Math.random() * totalNotes)
-      let cursor = await store.openCursor()
-      if (cursor) {
-        if (randomSkip > 0) { // Only advance if randomSkip is greater than 0
+      if (!uniqueIndexes.has(randomSkip)) {
+        uniqueIndexes.add(randomSkip)
+        if (randomSkip > 0) {
+          // Move the cursor to the randomSkip position if not already there
           await cursor.advance(randomSkip)
-          if (cursor) {
-            yield cursor.value
-            cursor = await cursor.continue()
-          }
-        } else {
-          // If randomSkip is 0, yield the first item directly
+        }
+        if (cursor) {
           yield cursor.value
-          cursor = await cursor.continue() // Continue to the next for proper iteration
+          // After yielding, reset the cursor to the start for the next random pick
+          cursor = await store.openCursor()
         }
       }
     }
