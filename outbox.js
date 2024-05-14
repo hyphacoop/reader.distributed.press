@@ -170,6 +170,7 @@ class DistributedActivity extends HTMLElement {
   displayUnimplemented () {
     const message = `Activity type ${this.activityType} is not implemented yet.`
     const messageElement = document.createElement('p')
+    messageElement.classList.add('other-activity')
     messageElement.textContent = message
     this.appendChild(messageElement)
   }
@@ -220,6 +221,7 @@ class DistributedActivity extends HTMLElement {
     const to = this.activityData.object
     const message = `New follow request from ${from} to ${to}`
     const messageElement = document.createElement('p')
+    messageElement.classList.add('other-activity')
     messageElement.textContent = message
     this.appendChild(messageElement)
   }
@@ -227,6 +229,7 @@ class DistributedActivity extends HTMLElement {
   displayLikeActivity () {
     const message = `New like on ${this.activityData.object}`
     const messageElement = document.createElement('p')
+    messageElement.classList.add('other-activity')
     messageElement.textContent = message
     this.appendChild(messageElement)
   }
