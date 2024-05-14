@@ -7,9 +7,9 @@ class ReaderTimeline extends HTMLElement {
   limit = 32
   hasMoreItems = true
   sort = 'latest'
+  totalNotesCount = 0
+  loadedNotesCount = 0
   loadMoreBtn = null
-  randomNotes = [] // Cache for random notes
-  randomIndex = 0 // Current index in the random notes cache
 
   constructor () {
     super()
@@ -24,7 +24,7 @@ class ReaderTimeline extends HTMLElement {
     this.loadMoreBtn.addEventListener('click', () => this.loadMore())
   }
 
-  connectedCallback () {
+  async connectedCallback () {
     this.initializeSortOrder()
     this.initializeDefaultFollowedActors().then(() => this.initTimeline())
   }
@@ -52,8 +52,8 @@ class ReaderTimeline extends HTMLElement {
 
   async resetTimeline () {
     this.skip = 0
-    this.randomIndex = 0
-    this.randomNotes = []
+    this.totalNotesCount = await db.getTotalNotesCount()
+    this.loadedNotesCount = 0
     this.hasMoreItems = true
     while (this.firstChild) {
       this.removeChild(this.firstChild)
@@ -78,34 +78,34 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline () {
+    this.loadMore() // Start loading notes immediately
+
     if (!hasLoaded) {
       hasLoaded = true
       const followedActors = await db.getFollowedActors()
-      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+      // Ingest actors in the background without waiting for them
+      Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+        .then(() => console.log('All followed actors have been ingested'))
+        .catch(error => console.error('Error ingesting followed actors:', error))
     }
-    this.loadMore()
   }
 
   async loadMore () {
     this.loadMoreBtnWrapper.remove()
     let count = 0
 
-    if (this.sort === 'random' && this.randomNotes.length === 0) {
-      const allNotes = []
-      for await (const note of db.searchNotesRandom(this.limit)) {
-        allNotes.push(note)
-      }
-      this.randomNotes = allNotes.sort(() => Math.random() - 0.5)
-    }
-
-    const notesToShow = this.sort === 'random'
-      ? this.randomNotes.slice(this.randomIndex, this.randomIndex + this.limit)
-      : await this.fetchSortedNotes()
-
-    for (const note of notesToShow) {
-      if (note) {
+    if (this.sort === 'random') {
+      for await (const note of db.searchNotesRandom({ limit: this.limit })) {
         this.appendNoteElement(note)
         count++
+      }
+    } else {
+      const notesToShow = await this.fetchSortedNotes()
+      for (const note of notesToShow) {
+        if (note) {
+          this.appendNoteElement(note)
+          count++
+        }
       }
     }
 
@@ -124,10 +124,10 @@ class ReaderTimeline extends HTMLElement {
 
   updateIndexes (count) {
     if (this.sort === 'random') {
-      this.randomIndex += this.limit
-      this.hasMoreItems = this.randomIndex < this.randomNotes.length
+      this.loadedNotesCount += count
+      this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
     } else {
-      this.skip += this.limit
+      this.skip += count
       this.hasMoreItems = count === this.limit
     }
   }

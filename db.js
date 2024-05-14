@@ -191,6 +191,13 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
+  async getTotalNotesCount () {
+    const tx = this.db.transaction(NOTES_STORE, 'readonly')
+    const store = tx.objectStore(NOTES_STORE)
+    const totalNotes = await store.count()
+    return totalNotes
+  }
+
   async getActivity (url) {
     try {
       return this.db.get(ACTIVITIES_STORE, url)
