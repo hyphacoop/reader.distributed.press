@@ -51,11 +51,21 @@ class ThemeSelector extends HTMLElement {
     const select = document.createElement('select')
     select.id = 'theme-select'
 
-    // Create and append the options
-    const options = [
-      { value: 'light', text: 'Light' },
-      { value: 'dark', text: 'Dark' },
-      { value: '', text: '👁️ Color Blind Themes 👁️', disabled: true },
+    // Create and append the standard theme options
+    const standardGroup = document.createElement('optgroup')
+    standardGroup.label = 'Standard Themes';
+    ['light', 'dark'].forEach(text => {
+      const option = document.createElement('option')
+      option.value = text
+      option.textContent = text.charAt(0).toUpperCase() + text.slice(1)
+      standardGroup.appendChild(option)
+    })
+    select.appendChild(standardGroup)
+
+    // Create and append the colorblind theme options within an optgroup
+    const colorBlindGroup = document.createElement('optgroup')
+    colorBlindGroup.label = 'Color Blind Themes';
+    [
       { value: 'deuteranomaly', text: 'Deuteranomaly (Green-Weak)' },
       { value: 'protanomaly', text: 'Protanomaly (Red-Weak)' },
       { value: 'deuteranopia', text: 'Deuteranopia (Green-Blind)' },
@@ -63,15 +73,14 @@ class ThemeSelector extends HTMLElement {
       { value: 'tritanopia', text: 'Tritanopia (Blue-Blind)' },
       { value: 'tritanomaly', text: 'Tritanomaly (Blue-Weak)' },
       { value: 'achromatopsia', text: 'Achromatopsia (All-Color-Blind)' }
-    ]
-
-    // Create and append the options
-    options.forEach(({ value, text }) => {
+    ].forEach(({ value, text }) => {
       const option = document.createElement('option')
       option.value = value
       option.textContent = text
-      select.appendChild(option)
+      colorBlindGroup.appendChild(option)
     })
+
+    select.appendChild(colorBlindGroup)
 
     // Append the select & style to the template's content
     template.content.appendChild(select)
