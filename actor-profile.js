@@ -87,6 +87,9 @@ class ActorProfile extends HTMLElement {
       pUserName.classList.add('profile-username')
       pUserName.textContent = `@${actorInfo.preferredUsername}`
       actorContainer.appendChild(pUserName) // Append to the actor container
+
+      // Dispatch event with username
+      this.dispatchEvent(new CustomEvent('usernameUpdated', { bubbles: true, detail: { username: actorInfo.preferredUsername } }))
     }
 
     if (actorInfo.summary) {
