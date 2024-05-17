@@ -85,6 +85,7 @@ class ActorProfile extends HTMLElement {
     if (actorInfo.preferredUsername) {
       const pUserName = document.createElement('div')
       pUserName.classList.add('profile-username')
+      pUserName.href = db.getObjectPage(actorInfo)
       pUserName.textContent = `@${actorInfo.preferredUsername}`
       actorContainer.appendChild(pUserName) // Append to the actor container
 
