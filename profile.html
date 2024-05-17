@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>User Profile</title>
+<title>Reader Profile</title>
 <style>
   @import url("./actor-profile.css");
   @import url("./common.css");
@@ -23,7 +23,7 @@
 </div>
 <script>
   document.addEventListener('usernameUpdated', (event) => {
-    document.title = `@${event.detail.username}`;
+    document.title += ` @${event.detail.username}`;
   });
 
   // Get actor url
