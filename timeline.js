@@ -109,7 +109,7 @@ class ReaderTimeline extends HTMLElement {
       }
     }
 
-    this.updateIndexes(count)
+    this.updateHasMore(count)
     this.appendLoadMoreIfNeeded()
   }
 
@@ -122,7 +122,7 @@ class ReaderTimeline extends HTMLElement {
     return notes
   }
 
-  updateIndexes (count) {
+  updateHasMore (count) {
     if (this.sort === 'random') {
       this.loadedNotesCount += count
       this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
