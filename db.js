@@ -227,31 +227,24 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotesRandom ({ limit = DEFAULT_LIMIT } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    let count = 0
-    const direction = sort > 0 ? 'next' : 'prev' // 'prev' for descending order
-    let cursor = null
+    const store = tx.objectStore(NOTES_STORE)
+    const totalNotes = await store.count()
 
-    const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
+    if (totalNotes === 0) return // Early exit if no notes are present
 
-    const index = tx.store.index(indexName)
+    for (let i = 0; i < limit; i++) {
+      const randomSkip = Math.floor(Math.random() * totalNotes)
+      const cursor = await store.openCursor()
 
-    if (attributedTo) {
-      cursor = await index.openCursor([attributedTo], direction)
-    } else {
-      cursor = await index.openCursor(null, direction)
-    }
+      if (randomSkip > 0) {
+        await cursor.advance(randomSkip)
+      }
 
-    // Skip the required entries
-    if (skip) await cursor.advance(skip)
-
-    // Collect the required limit of entries
-    while (cursor) {
-      if (count >= limit) break
-      count++
-      yield cursor.value
-      cursor = await cursor.continue()
+      if (cursor) {
+        yield cursor.value
+      }
     }
 
     await tx.done
