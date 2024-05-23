@@ -83,7 +83,7 @@ class ActorProfile extends HTMLElement {
     }
 
     if (actorInfo.preferredUsername) {
-      const pUserName = document.createElement('div')
+      const pUserName = document.createElement('a')
       pUserName.classList.add('profile-username')
       pUserName.href = db.getObjectPage(actorInfo)
       pUserName.textContent = `@${actorInfo.preferredUsername}`
