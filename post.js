@@ -1,6 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
+import { resolveP2PUrl } from './db.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -54,6 +55,7 @@ class DistributedPost extends HTMLElement {
       this.renderErrorContent('No post URL provided')
       return
     }
+    postUrl = resolveP2PUrl(postUrl)
 
     try {
       const content = await db.getNote(postUrl)
@@ -119,6 +121,19 @@ class DistributedPost extends HTMLElement {
     const sanitizedContent = DOMPurify.sanitize(contentSource)
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
+
+    const images = contentDOM.querySelectorAll('img')
+    images.forEach(img => {
+      const src = img.getAttribute('src')
+      console.log('Original src:', src)
+      img.setAttribute('src', resolveP2PUrl(src))
+    })
+
+    const videos = contentDOM.querySelectorAll('video source')
+    videos.forEach(video => {
+      const src = video.getAttribute('src')
+      video.setAttribute('src', resolveP2PUrl(src))
+    })
 
     // Process all anchor elements to handle actor and posts mentions
     const anchors = contentDOM.querySelectorAll('a')
@@ -346,7 +361,7 @@ class ActorInfo extends HTMLElement {
 
         const img = document.createElement('img')
         img.classList.add('actor-icon')
-        img.src = iconUrl
+        img.src = resolveP2PUrl(iconUrl)
         img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
         img.addEventListener('click', this.navigateToActorProfile.bind(this))
         author.appendChild(img)

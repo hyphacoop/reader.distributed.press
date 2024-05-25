@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import { resolveP2PUrl } from './db.js'
 
 class ActorProfile extends HTMLElement {
   static get observedAttributes () {
@@ -52,7 +53,7 @@ class ActorProfile extends HTMLElement {
 
     const img = document.createElement('img')
     img.classList.add('profile-icon')
-    img.src = iconUrl
+    img.src = resolveP2PUrl(iconUrl)
     img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
     actorContainer.appendChild(img) // Append to the actor container
 

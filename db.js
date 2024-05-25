@@ -42,6 +42,18 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
+export function resolveP2PUrl (url) {
+  if (!url) return url
+
+  if (url.startsWith(HYPER_PREFIX)) {
+    return url.replace(HYPER_PREFIX, 'https://hyper.hypha.coop/hyper/')
+  } else if (url.startsWith(IPNS_PREFIX)) {
+    return url.replace(IPNS_PREFIX, 'https://ipfs.hypha.coop/ipns/')
+  }
+
+  return url
+}
+
 export class ActivityPubDB extends EventTarget {
   constructor (db, fetch = globalThis.fetch) {
     super()
@@ -103,6 +115,8 @@ export class ActivityPubDB extends EventTarget {
     if (url && typeof url === 'object') {
       return url
     }
+    url = resolveP2PUrl(url)
+
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch
