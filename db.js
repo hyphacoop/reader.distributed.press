@@ -360,7 +360,7 @@ export class ActivityPubDB extends EventTarget {
       const note = await this.#get(activity.object)
       if (note.type === TYPE_NOTE) {
         console.log('Ingesting note:', note)
-        await this.ingestNote(note)
+        await this.ingestNote(note, true)
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
@@ -370,7 +370,13 @@ export class ActivityPubDB extends EventTarget {
     return true
   }
 
-  async ingestNote (note) {
+  async ingestNote (note, forceIngest = false) {
+    const isFollowed = await this.isActorFollowed(note.attributedTo)
+    if (!isFollowed && !forceIngest) {
+      console.log('Skipping note ingestion as actor is not followed and forceIngest is false.')
+      return
+    }
+
     console.log('Ingesting note', note)
     // Convert needed fields to date
     note.published = new Date(note.published)
