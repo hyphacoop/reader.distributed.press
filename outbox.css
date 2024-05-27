@@ -3,3 +3,8 @@
   font-size: 0.875rem;
   text-align: center;
 }
+
+.other-activity {
+  color: var(--rdp-text-color);
+  font-size: 16px;
+}
