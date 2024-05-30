@@ -238,6 +238,7 @@ export class ActivityPubDB extends EventTarget {
     const index = tx.store.index(indexName)
 
     if (sort === 0) { // Random sort
+      // TODO: Consider removing duplicates in the future to improve UX
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
