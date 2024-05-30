@@ -227,54 +227,47 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotesRandom ({ limit = DEFAULT_LIMIT } = {}) {
+  async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const store = tx.objectStore(NOTES_STORE)
-    const totalNotes = await store.count()
+    let count = 0
+    const direction = sort > 0 ? 'next' : (sort === 0 ? 'next' : 'prev') // 'prev' for descending order
+    let cursor = null
 
-    if (totalNotes === 0) return // Early exit if no notes are present
+    const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
 
-    for (let i = 0; i < limit; i++) {
-      const randomSkip = Math.floor(Math.random() * totalNotes)
-      const cursor = await store.openCursor()
+    const index = tx.store.index(indexName)
 
-      if (randomSkip > 0) {
-        await cursor.advance(randomSkip)
-      }
-
-      if (cursor) {
-        yield cursor.value
-      }
-    }
-
-    await tx.done
-  }
-
-  async * searchNotesRandom ({ limit = DEFAULT_LIMIT } = {}) {
-    const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const store = tx.objectStore(NOTES_STORE)
-    const totalNotes = await store.count()
-
-    if (totalNotes === 0) return // Early exit if no notes are present
-
-    let cursor = await store.openCursor()
-    const uniqueIndexes = new Set()
-
-    while (uniqueIndexes.size < limit && uniqueIndexes.size < totalNotes) {
-      const randomSkip = Math.floor(Math.random() * totalNotes)
-      if (!uniqueIndexes.has(randomSkip)) {
-        uniqueIndexes.add(randomSkip)
+    if (sort === 0) { // Random sort
+      const totalNotes = await index.count()
+      for (let i = 0; i < limit; i++) {
+        const randomSkip = Math.floor(Math.random() * totalNotes)
+        cursor = await index.openCursor()
         if (randomSkip > 0) {
-          // Move the cursor to the randomSkip position if not already there
           await cursor.advance(randomSkip)
         }
         if (cursor) {
           yield cursor.value
-          // After yielding, reset the cursor to the start for the next random pick
-          cursor = await store.openCursor()
         }
       }
+    } else {
+      if (attributedTo) {
+        cursor = await index.openCursor([attributedTo], direction)
+      } else {
+        cursor = await index.openCursor(null, direction)
+      }
+
+      // Skip the required entries
+      if (skip) await cursor.advance(skip)
+
+      // Collect the required limit of entries
+      while (cursor) {
+        if (count >= limit) break
+        count++
+        yield cursor.value
+        cursor = await cursor.continue()
+      }
     }
+
     await tx.done
   }
 
