@@ -95,7 +95,7 @@ class ReaderTimeline extends HTMLElement {
     let count = 0
 
     if (this.sort === 'random') {
-      for await (const note of db.searchNotes({ limit: this.limit })) {
+      for await (const note of db.searchNotes({}, { limit: this.limit, sort: this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1) })) {
         this.appendNoteElement(note)
         count++
       }
