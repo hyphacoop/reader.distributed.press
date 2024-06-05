@@ -356,11 +356,16 @@ export class ActivityPubDB extends EventTarget {
     console.log('Ingesting activity:', activity)
     await this.db.put(ACTIVITIES_STORE, activity)
 
-    if (activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) {
+    if ((activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) && activity.actor) {
       const note = await this.#get(activity.object)
       if (note.type === TYPE_NOTE) {
-        console.log('Ingesting note:', note)
-        await this.ingestNote(note, true)
+        // Only ingest the note if the note's attributed actor is the same as the activity's actor
+        if (note.attributedTo === activity.actor) {
+          console.log('Ingesting note:', note)
+          await this.ingestNote(note)
+        } else {
+          console.log(`Skipping note ingestion for actor mismatch: Note attributed to ${note.attributedTo}, but activity actor is ${activity.actor}`)
+        }
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
@@ -370,10 +375,10 @@ export class ActivityPubDB extends EventTarget {
     return true
   }
 
-  async ingestNote (note, forceIngest = false) {
+  async ingestNote (note) {
     const isFollowed = await this.isActorFollowed(note.attributedTo)
-    if (!isFollowed && !forceIngest) {
-      console.log('Skipping note ingestion as actor is not followed and forceIngest is false.')
+    if (!isFollowed) {
+      console.log('Skipping note ingestion as actor is not followed.')
       return
     }
 
