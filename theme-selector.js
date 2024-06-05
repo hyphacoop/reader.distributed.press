@@ -39,7 +39,7 @@ class ThemeSelector extends HTMLElement {
     const style = document.createElement('style')
     style.textContent = `
           select {
-              padding: 4px;
+              padding: 2px;
               margin: 6px 0;
               border: 1px solid var(--rdp-border-color);
               border-radius: 4px;

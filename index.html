@@ -12,7 +12,17 @@
 </style>
 <div class="container">
   <sidebar-nav></sidebar-nav>
-  <reader-timeline></reader-timeline>
+  <div class="reader-container">
+    <div class="sort-container">
+      <label for="sortOrder">Sort Timeline:</label>
+      <select id="sortOrder" class="sort-dropdown">
+        <option value="latest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="random">Random</option>
+      </select>
+    </div>
+    <reader-timeline></reader-timeline>
+  </div>
   <div class="right-column">
     <!-- This is an empty column to balance the layout -->
   </div>
