@@ -39,20 +39,6 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
-function fetchLink (data) {
-  const { url, id } = data
-
-  if (!url) return id
-  if (typeof url === 'string') return url
-  if (Array.isArray(url)) {
-    const firstLink = url.find((item) => (typeof item === 'string') || item.href)
-    if (firstLink) return firstLink
-  } else if (url.href) {
-    return url.href
-  }
-  return id
-}
-
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes () {
@@ -84,6 +70,12 @@ class DistributedPost extends HTMLElement {
     // Clear existing content
     this.innerHTML = ''
 
+    // Check if jsonLdData is an activity instead of a note
+    if ('object' in jsonLdData) {
+      this.renderErrorContent('Expected a Note but received an Activity')
+      return
+    }
+
     // Create the container for the post
     const postContainer = document.createElement('div')
     postContainer.classList.add('distributed-post')
@@ -107,8 +99,7 @@ class DistributedPost extends HTMLElement {
 
     // Published time element
     const publishedTime = document.createElement('a')
-    const postUrl = fetchLink({ url: jsonLdData.id || jsonLdData.object.id, id: jsonLdData.id || jsonLdData.object.id })
-    publishedTime.href = `/post.html?url=${encodeURIComponent(postUrl)}`
+    publishedTime.href = `/post.html?url=${encodeURIComponent(db.getObjectPage(jsonLdData))}`
     publishedTime.classList.add('time-ago')
     const elapsed = timeSince(jsonLdData.published)
     publishedTime.textContent = elapsed
@@ -229,7 +220,7 @@ class DistributedPost extends HTMLElement {
 
     // Create the clickable link for the date
     const fullDateLink = document.createElement('a')
-    fullDateLink.href = `/post.html?url=${encodeURIComponent(postUrl)}`
+    fullDateLink.href = `/post.html?url=${encodeURIComponent(jsonLdData.id)}`
     fullDateLink.classList.add('full-date')
     fullDateLink.textContent = formatDate(jsonLdData.published)
     dateContainer.appendChild(fullDateLink)

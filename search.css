@@ -1,0 +1,18 @@
+distributed-search form {
+  display: flex;
+  margin-top: 8px;
+}
+
+distributed-search input {
+  width: 10em;
+  padding: 4px;
+  border: 1px solid var(--rdp-border-color);
+  border-radius: 2px;
+}
+
+distributed-search button {
+  margin-left: 4px;
+  border: 1px solid var(--rdp-border-color);
+  border-radius: 2px;
+  cursor: pointer;
+}

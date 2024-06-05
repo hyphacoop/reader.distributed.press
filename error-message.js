@@ -16,6 +16,9 @@ class ErrorMessage extends HTMLElement {
           text-align: center;
           margin: 20px;
           font-size: 1rem;
+          border: 1px solid var(--rdp-border-color);
+          border-radius: 4px;
+          padding: 6px;
         }
       `
 

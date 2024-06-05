@@ -47,6 +47,15 @@
   overflow-wrap: break-word;
 }
 
+.disclaimer {
+  color: var(--rdp-text-color);
+  font-size: 1rem;
+}
+
+.disclaimer-link{
+  color: var(--rdp-link-color);
+}
+
 follow-button {
   appearance: none;
   border: 1px solid var(--rdp-border-color);

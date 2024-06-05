@@ -12,7 +12,26 @@ class ActorProfile extends HTMLElement {
 
   connectedCallback () {
     this.url = this.getAttribute('url')
+    this.renderDisclaimer() // Render the disclaimer regarding AUTHORIZED_FETCH
     this.fetchAndRenderActorProfile(this.url)
+  }
+
+  renderDisclaimer () {
+    const disclaimer = document.createElement('div')
+    disclaimer.classList.add('disclaimer')
+
+    const disclaimerText = document.createElement('p')
+    disclaimerText.textContent = 'Some features may not be available for servers with AUTHORIZED_FETCH enabled. '
+
+    const learnMoreLink = document.createElement('a')
+    learnMoreLink.classList.add('disclaimer-link')
+    learnMoreLink.setAttribute('href', 'https://github.com/hyphacoop/distributed-press-organizing/issues/147')
+    learnMoreLink.setAttribute('target', '_blank')
+    learnMoreLink.textContent = 'Learn more.'
+
+    disclaimerText.appendChild(learnMoreLink)
+    disclaimer.appendChild(disclaimerText)
+    this.prepend(disclaimer)
   }
 
   async fetchAndRenderActorProfile (url) {
@@ -64,10 +83,14 @@ class ActorProfile extends HTMLElement {
     }
 
     if (actorInfo.preferredUsername) {
-      const pUserName = document.createElement('div')
+      const pUserName = document.createElement('a')
       pUserName.classList.add('profile-username')
+      pUserName.href = db.getObjectPage(actorInfo)
       pUserName.textContent = `@${actorInfo.preferredUsername}`
       actorContainer.appendChild(pUserName) // Append to the actor container
+
+      // Dispatch event with username
+      this.dispatchEvent(new CustomEvent('usernameUpdated', { bubbles: true, detail: { username: actorInfo.preferredUsername } }))
     }
 
     if (actorInfo.summary) {
@@ -101,10 +124,14 @@ class ActorProfile extends HTMLElement {
   }
 
   renderError (message) {
-    this.innerHTML = '' // Clear existing content
+    // Clear the actor profile content only, leaving the disclaimer intact
+    while (this.lastChild && this.lastChild !== this.firstChild) {
+      this.removeChild(this.lastChild)
+    }
+
     const errorComponent = document.createElement('error-message')
     errorComponent.setAttribute('message', message)
-    this.appendChild(errorComponent)
+    this.appendChild(errorComponent) // Append below the disclaimer
   }
 }
 
