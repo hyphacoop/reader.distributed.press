@@ -398,12 +398,6 @@ export class ActivityPubDB extends EventTarget {
   }
 
   async ingestNote (note) {
-    const isFollowed = await this.isActorFollowed(note.attributedTo)
-    if (!isFollowed) {
-      console.log('Skipping note ingestion as actor is not followed.')
-      return
-    }
-
     console.log('Ingesting note', note)
     // Convert needed fields to date
     note.published = new Date(note.published)
