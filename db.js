@@ -164,12 +164,12 @@ export class ActivityPubDB extends EventTarget {
   async getNote (url) {
     try {
       const note = await this.db.get(NOTES_STORE, url)
-      if (!note) throw new Error('Not loaded')
-      return note
-    } catch {
+      if (!note) throw new Error('Note not loaded')
+      return note // Simply return the locally found note.
+    } catch (error) {
+      // If the note is not in the local store, fetch it but don't automatically ingest it.
       const note = await this.#get(url)
-      await this.ingestNote(note)
-      return note
+      return note // Return the fetched note for further processing by the caller.
     }
   }
 
