@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>User Profile</title>
+<title>Reader Profile</title>
 <style>
   @import url("./actor-profile.css");
   @import url("./common.css");
@@ -22,18 +22,8 @@
   </div>
 </div>
 <script>
-  // Pagination controls
-  document.addEventListener("outboxUpdated", () => {
-    const outboxElement = document.querySelector("distributed-outbox");
-    const prevButton = document.getElementById("prevPage");
-    const nextButton = document.getElementById("nextPage");
-
-    if (prevButton) {
-      prevButton.addEventListener("click", () => outboxElement.prevPage());
-    }
-    if (nextButton) {
-      nextButton.addEventListener("click", () => outboxElement.nextPage());
-    }
+  document.addEventListener('usernameUpdated', (event) => {
+    document.title += ` @${event.detail.username}`;
   });
 
   // Get actor url
