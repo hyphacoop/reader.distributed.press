@@ -187,6 +187,13 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
+  async getTotalNotesCount () {
+    const tx = this.db.transaction(NOTES_STORE, 'readonly')
+    const store = tx.objectStore(NOTES_STORE)
+    const totalNotes = await store.count()
+    return totalNotes
+  }
+
   async getActivity (url) {
     try {
       return this.db.get(ACTIVITIES_STORE, url)
@@ -219,28 +226,43 @@ export class ActivityPubDB extends EventTarget {
   async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     let count = 0
-    const direction = sort > 0 ? 'next' : 'prev' // 'prev' for descending order
+    const direction = sort > 0 ? 'next' : (sort === 0 ? 'next' : 'prev') // 'prev' for descending order
     let cursor = null
 
     const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
 
     const index = tx.store.index(indexName)
 
-    if (attributedTo) {
-      cursor = await index.openCursor([attributedTo], direction)
+    if (sort === 0) { // Random sort
+      // TODO: Consider removing duplicates in the future to improve UX
+      const totalNotes = await index.count()
+      for (let i = 0; i < limit; i++) {
+        const randomSkip = Math.floor(Math.random() * totalNotes)
+        cursor = await index.openCursor()
+        if (randomSkip > 0) {
+          await cursor.advance(randomSkip)
+        }
+        if (cursor) {
+          yield cursor.value
+        }
+      }
     } else {
-      cursor = await index.openCursor(null, direction)
-    }
+      if (attributedTo) {
+        cursor = await index.openCursor([attributedTo], direction)
+      } else {
+        cursor = await index.openCursor(null, direction)
+      }
 
-    // Skip the required entries
-    if (skip) await cursor.advance(skip)
+      // Skip the required entries
+      if (skip) await cursor.advance(skip)
 
-    // Collect the required limit of entries
-    while (cursor) {
-      if (count >= limit) break
-      count++
-      yield cursor.value
-      cursor = await cursor.continue()
+      // Collect the required limit of entries
+      while (cursor) {
+        if (count >= limit) break
+        count++
+        yield cursor.value
+        cursor = await cursor.continue()
+      }
     }
 
     await tx.done
