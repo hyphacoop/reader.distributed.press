@@ -1,7 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
-import { resolveP2PUrl } from './db.js'
+import { resolveP2PUrl, isP2P } from './db.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -40,6 +40,48 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
+function insertImagesAndVideos (content) {
+  const parser = new DOMParser()
+  const contentDOM = parser.parseFromString(content, 'text/html')
+
+  contentDOM.querySelectorAll('img').forEach(img => {
+    const originalSrc = img.getAttribute('src')
+    const p2pSrc = resolveP2PUrl(originalSrc)
+
+    img.onerror = () => {
+      console.log(`Failed to load image at ${originalSrc}. Attempting to resolve...`)
+      // Fallback to gateway URL only if it's a P2P URL and not already using a gateway
+      if (isP2P(originalSrc) && !originalSrc.includes('hypha.coop')) {
+        const fallbackSrc = resolveP2PUrl(originalSrc)
+        console.log(`Resolving to gateway URL due to error: ${fallbackSrc}`)
+        img.setAttribute('src', fallbackSrc)
+      }
+    }
+
+    img.setAttribute('src', p2pSrc)
+    console.log(`Set image src to: ${p2pSrc}`)
+  })
+
+  contentDOM.querySelectorAll('video source').forEach(video => {
+    const originalSrc = video.getAttribute('src')
+    const p2pSrc = resolveP2PUrl(originalSrc)
+
+    video.onerror = () => {
+      console.log(`Failed to load video at ${originalSrc}. Attempting to resolve...`)
+      if (isP2P(originalSrc) && !originalSrc.includes('hypha.coop')) {
+        const fallbackSrc = resolveP2PUrl(originalSrc)
+        console.log(`Resolving to gateway URL due to error: ${fallbackSrc}`)
+        video.setAttribute('src', fallbackSrc)
+      }
+    }
+
+    video.setAttribute('src', p2pSrc)
+    console.log(`Set video src to: ${p2pSrc}`)
+  })
+
+  return contentDOM.body.innerHTML // Return the modified HTML to be inserted
+}
+
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes () {
@@ -55,11 +97,13 @@ class DistributedPost extends HTMLElement {
       this.renderErrorContent('No post URL provided')
       return
     }
-    postUrl = resolveP2PUrl(postUrl)
+    postUrl = await resolveP2PUrl(postUrl)
 
     try {
       const content = await db.getNote(postUrl)
-
+      if (content && content.content) {
+        content.content = insertImagesAndVideos(content.content) // Resolve URLs before rendering
+      }
       // Assuming JSON-LD content has a "summary" field
       this.renderPostContent(content)
     } catch (error) {
@@ -117,23 +161,9 @@ class DistributedPost extends HTMLElement {
     // Determine content source based on structure of jsonLdData
     const contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
 
-    // Sanitize content and create a DOM from it
     const sanitizedContent = DOMPurify.sanitize(contentSource)
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
-
-    const images = contentDOM.querySelectorAll('img')
-    images.forEach(img => {
-      const src = img.getAttribute('src')
-      console.log('Original src:', src)
-      img.setAttribute('src', resolveP2PUrl(src))
-    })
-
-    const videos = contentDOM.querySelectorAll('video source')
-    videos.forEach(video => {
-      const src = video.getAttribute('src')
-      video.setAttribute('src', resolveP2PUrl(src))
-    })
 
     // Process all anchor elements to handle actor and posts mentions
     const anchors = contentDOM.querySelectorAll('a')
@@ -337,6 +367,7 @@ class ActorInfo extends HTMLElement {
   }
 
   async fetchAndRenderActorInfo (url) {
+    url = await resolveP2PUrl(url)
     try {
       const actorInfo = await db.getActor(url)
       if (actorInfo) {
