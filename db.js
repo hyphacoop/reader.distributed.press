@@ -164,12 +164,12 @@ export class ActivityPubDB extends EventTarget {
   async getNote (url) {
     try {
       const note = await this.db.get(NOTES_STORE, url)
-      if (!note) throw new Error('Not loaded')
-      return note
-    } catch {
+      if (!note) throw new Error('Note not loaded')
+      return note // Simply return the locally found note.
+    } catch (error) {
+      // If the note is not in the local store, fetch it but don't automatically ingest it.
       const note = await this.#get(url)
-      await this.ingestNote(note)
-      return note
+      return note // Return the fetched note for further processing by the caller.
     }
   }
 
@@ -378,11 +378,16 @@ export class ActivityPubDB extends EventTarget {
     console.log('Ingesting activity:', activity)
     await this.db.put(ACTIVITIES_STORE, activity)
 
-    if (activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) {
+    if ((activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) && activity.actor) {
       const note = await this.#get(activity.object)
       if (note.type === TYPE_NOTE) {
-        console.log('Ingesting note:', note)
-        await this.ingestNote(note)
+        // Only ingest the note if the note's attributed actor is the same as the activity's actor
+        if (note.attributedTo === activity.actor) {
+          console.log('Ingesting note:', note)
+          await this.ingestNote(note)
+        } else {
+          console.log(`Skipping note ingestion for actor mismatch: Note attributed to ${note.attributedTo}, but activity actor is ${activity.actor}`)
+        }
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
