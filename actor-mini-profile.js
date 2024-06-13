@@ -1,5 +1,4 @@
 import { db } from './dbInstance.js'
-import { resolveP2PUrl } from './db.js'
 
 class ActorMiniProfile extends HTMLElement {
   static get observedAttributes () {
@@ -49,11 +48,10 @@ class ActorMiniProfile extends HTMLElement {
     }
 
     // Actor icon
-    const img = document.createElement('img')
-    img.className = 'profile-mini-icon'
-    img.src = resolveP2PUrl(iconUrl)
-    img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
-    clickableContainer.appendChild(img)
+    const p2pImage = document.createElement('p2p-image')
+    p2pImage.className = 'profile-mini-icon'
+    p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
+    clickableContainer.appendChild(p2pImage)
 
     // Actor name
     if (actorInfo.name) {

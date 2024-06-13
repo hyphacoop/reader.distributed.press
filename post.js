@@ -44,42 +44,39 @@ function insertImagesAndVideos (content) {
   const parser = new DOMParser()
   const contentDOM = parser.parseFromString(content, 'text/html')
 
+  // Replace all <img> tags with <p2p-image> tags
   contentDOM.querySelectorAll('img').forEach(img => {
     const originalSrc = img.getAttribute('src')
-    const p2pSrc = resolveP2PUrl(originalSrc)
-
-    img.onerror = () => {
-      console.log(`Failed to load image at ${originalSrc}. Attempting to resolve...`)
-      // Fallback to gateway URL only if it's a P2P URL and not already using a gateway
-      if (isP2P(originalSrc) && !originalSrc.includes('hypha.coop')) {
-        const fallbackSrc = resolveP2PUrl(originalSrc)
-        console.log(`Resolving to gateway URL due to error: ${fallbackSrc}`)
-        img.setAttribute('src', fallbackSrc)
-      }
-    }
-
-    img.setAttribute('src', p2pSrc)
-    console.log(`Set image src to: ${p2pSrc}`)
+    console.log(`Original img src: ${originalSrc}`)
+    const p2pImg = document.createElement('p2p-image')
+    p2pImg.setAttribute('src', originalSrc)
+    img.parentNode.replaceChild(p2pImg, img)
+    console.log(`Replaced img with p2p-image having src: ${p2pImg.getAttribute('src')}`)
   })
 
-  contentDOM.querySelectorAll('video source').forEach(video => {
-    const originalSrc = video.getAttribute('src')
-    const p2pSrc = resolveP2PUrl(originalSrc)
-
-    video.onerror = () => {
-      console.log(`Failed to load video at ${originalSrc}. Attempting to resolve...`)
-      if (isP2P(originalSrc) && !originalSrc.includes('hypha.coop')) {
-        const fallbackSrc = resolveP2PUrl(originalSrc)
-        console.log(`Resolving to gateway URL due to error: ${fallbackSrc}`)
-        video.setAttribute('src', fallbackSrc)
-      }
+  // Replace all <video> tags with <p2p-video> tags
+  contentDOM.querySelectorAll('video').forEach(video => {
+    const p2pVideo = document.createElement('p2p-video')
+    if (video.hasAttribute('src')) {
+      const originalSrc = video.getAttribute('src')
+      p2pVideo.setAttribute('src', originalSrc)
     }
-
-    video.setAttribute('src', p2pSrc)
-    console.log(`Set video src to: ${p2pSrc}`)
+    Array.from(video.children).forEach(source => {
+      if (source.tagName === 'SOURCE') {
+        const originalSrc = source.getAttribute('src')
+        console.log(`Original video src: ${originalSrc}`)
+        const srcType = source.getAttribute('type')
+        const p2pSource = document.createElement('source')
+        p2pSource.setAttribute('src', originalSrc)
+        p2pSource.setAttribute('type', srcType)
+        p2pVideo.appendChild(p2pSource)
+        console.log(`Replaced video with p2p-video having src: ${p2pSource.getAttribute('src')}`)
+      }
+    })
+    video.parentNode.replaceChild(p2pVideo, video)
   })
 
-  return contentDOM.body.innerHTML // Return the modified HTML to be inserted
+  return contentDOM.body.innerHTML
 }
 
 // Define a class for the <distributed-post> web component
@@ -97,15 +94,14 @@ class DistributedPost extends HTMLElement {
       this.renderErrorContent('No post URL provided')
       return
     }
-    postUrl = await resolveP2PUrl(postUrl)
 
     try {
       const content = await db.getNote(postUrl)
       if (content && content.content) {
         content.content = insertImagesAndVideos(content.content) // Resolve URLs before rendering
+        // Assuming JSON-LD content has a "summary" field
+        this.renderPostContent(content)
       }
-      // Assuming JSON-LD content has a "summary" field
-      this.renderPostContent(content)
     } catch (error) {
       console.error(error)
       this.renderErrorContent(error.message)

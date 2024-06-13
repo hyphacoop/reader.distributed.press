@@ -42,6 +42,16 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
+export async function supportsP2P (url) {
+  try {
+    const response = await fetch(url)
+    return response.ok
+  } catch (error) {
+    console.log('P2P URL loading failed:', error)
+    return false
+  }
+}
+
 export function resolveP2PUrl (url) {
   if (!url) return url
 
@@ -115,7 +125,6 @@ export class ActivityPubDB extends EventTarget {
     if (url && typeof url === 'object') {
       return url
     }
-    url = resolveP2PUrl(url)
 
     let response
     // Try fetching directly for all URLs (including P2P URLs)
