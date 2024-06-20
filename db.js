@@ -42,6 +42,46 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
+// Global cache to store protocol reachability
+const protocolSupportMap = new Map()
+
+export async function supportsP2P (url) {
+  const urlObject = new URL(url)
+  const protocol = urlObject.protocol
+
+  if (protocolSupportMap.has(protocol)) {
+    return protocolSupportMap.get(protocol)
+  }
+
+  // Set a promise to avoid multiple simultaneous checks
+  const supportCheckPromise = fetch(url)
+    .then(response => {
+      const supported = response.ok
+      protocolSupportMap.set(protocol, supported)
+      return supported
+    })
+    .catch(error => {
+      console.error(`Error checking protocol support for ${protocol}:`, error)
+      protocolSupportMap.set(protocol, false)
+      return false
+    })
+
+  protocolSupportMap.set(protocol, supportCheckPromise)
+  return supportCheckPromise
+}
+
+export function resolveP2PUrl (url) {
+  if (!url) return url
+
+  if (url.startsWith(HYPER_PREFIX)) {
+    return url.replace(HYPER_PREFIX, 'https://hyper.hypha.coop/hyper/')
+  } else if (url.startsWith(IPNS_PREFIX)) {
+    return url.replace(IPNS_PREFIX, 'https://ipfs.hypha.coop/ipns/')
+  }
+
+  return url
+}
+
 export class ActivityPubDB extends EventTarget {
   constructor (db, fetch = globalThis.fetch) {
     super()
@@ -103,6 +143,7 @@ export class ActivityPubDB extends EventTarget {
     if (url && typeof url === 'object') {
       return url
     }
+
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch

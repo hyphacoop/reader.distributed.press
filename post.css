@@ -32,15 +32,6 @@
   align-items: center;
 }
 
-.actor-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: #000000;
-  margin-right: 8px;
-  cursor: pointer;
-}
-
 .actor-details {
   display: flex;
   flex-direction: column;

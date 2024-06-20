@@ -1,6 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
+import './p2p-media.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -39,6 +40,44 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
+async function insertImagesAndVideos (content) {
+  const parser = new DOMParser()
+  const contentDOM = parser.parseFromString(content, 'text/html')
+
+  const imgPromises = Array.from(contentDOM.querySelectorAll('img')).map(async (img) => {
+    const originalSrc = img.getAttribute('src')
+    const p2pImg = document.createElement('p2p-image')
+    p2pImg.setAttribute('src', originalSrc)
+
+    p2pImg.addEventListener('load-error', (event) => {
+      console.log(`Error loading image at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
+      p2pImg.setAttribute('src', event.detail.fallbackSrc)
+      console.log('Updated p2p-image src after fallback:', p2pImg.getAttribute('src'))
+    })
+
+    img.parentNode.replaceChild(p2pImg, img)
+    console.log('Replaced img with p2p-image having initial src:', p2pImg.getAttribute('src'))
+  })
+
+  const videoPromises = Array.from(contentDOM.querySelectorAll('video')).map(async (video) => {
+    const originalSrc = video.getAttribute('src')
+    const p2pVideo = document.createElement('p2p-video')
+    p2pVideo.setAttribute('src', originalSrc)
+
+    p2pVideo.addEventListener('load-error', (event) => {
+      console.log(`Error loading video at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
+      p2pVideo.setAttribute('src', event.detail.fallbackSrc)
+      console.log('Updated p2p-video src after fallback:', p2pVideo.getAttribute('src'))
+    })
+
+    video.parentNode.replaceChild(p2pVideo, video)
+  })
+
+  await Promise.all([...imgPromises, ...videoPromises])
+
+  return contentDOM.body.innerHTML
+}
+
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes () {
@@ -57,9 +96,11 @@ class DistributedPost extends HTMLElement {
 
     try {
       const content = await db.getNote(postUrl)
-
-      // Assuming JSON-LD content has a "summary" field
-      this.renderPostContent(content)
+      if (content && content.content) {
+        content.content = await insertImagesAndVideos(content.content) // Resolve URLs before rendering
+        // Assuming JSON-LD content has a "summary" field
+        this.renderPostContent(content)
+      }
     } catch (error) {
       console.error(error)
       this.renderErrorContent(error.message)
@@ -115,7 +156,6 @@ class DistributedPost extends HTMLElement {
     // Determine content source based on structure of jsonLdData
     const contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
 
-    // Sanitize content and create a DOM from it
     const sanitizedContent = DOMPurify.sanitize(contentSource)
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
@@ -344,12 +384,12 @@ class ActorInfo extends HTMLElement {
           }
         }
 
-        const img = document.createElement('img')
-        img.classList.add('actor-icon')
-        img.src = iconUrl
-        img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
-        img.addEventListener('click', this.navigateToActorProfile.bind(this))
-        author.appendChild(img)
+        const p2pImage = document.createElement('p2p-image')
+        p2pImage.className = 'actor-icon'
+        p2pImage.setAttribute('src', iconUrl)
+        p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
+        p2pImage.addEventListener('click', this.navigateToActorProfile.bind(this))
+        author.appendChild(p2pImage)
 
         if (actorInfo.name) {
           const pName = document.createElement('div')

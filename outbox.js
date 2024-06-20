@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import './post.js'
 
 class DistributedOutbox extends HTMLElement {
   skip = 0
