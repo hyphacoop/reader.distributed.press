@@ -70,8 +70,8 @@ class ActorProfile extends HTMLElement {
     }
 
     const p2pImage = document.createElement('p2p-image')
-    p2pImage.setAttribute('src', iconUrl)
     p2pImage.classList.add('profile-icon')
+    p2pImage.setAttribute('src', iconUrl)
     p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
     actorContainer.appendChild(p2pImage) // Append to the actor container
 

@@ -1,7 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
-import { resolveP2PUrl, isP2P } from './db.js'
+import './p2p-media.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -40,41 +40,40 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
-function insertImagesAndVideos (content) {
+async function insertImagesAndVideos (content) {
   const parser = new DOMParser()
   const contentDOM = parser.parseFromString(content, 'text/html')
 
-  // Replace all <img> tags with <p2p-image> tags
-  contentDOM.querySelectorAll('img').forEach(img => {
+  const imgPromises = Array.from(contentDOM.querySelectorAll('img')).map(async (img) => {
     const originalSrc = img.getAttribute('src')
-    console.log(`Original img src: ${originalSrc}`)
     const p2pImg = document.createElement('p2p-image')
     p2pImg.setAttribute('src', originalSrc)
+
+    p2pImg.addEventListener('load-error', (event) => {
+      console.log(`Error loading image at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
+      p2pImg.setAttribute('src', event.detail.fallbackSrc)
+      console.log('Updated p2p-image src after fallback:', p2pImg.getAttribute('src'))
+    })
+
     img.parentNode.replaceChild(p2pImg, img)
-    console.log(`Replaced img with p2p-image having src: ${p2pImg.getAttribute('src')}`)
+    console.log('Replaced img with p2p-image having initial src:', p2pImg.getAttribute('src'))
   })
 
-  // Replace all <video> tags with <p2p-video> tags
-  contentDOM.querySelectorAll('video').forEach(video => {
+  const videoPromises = Array.from(contentDOM.querySelectorAll('video')).map(async (video) => {
+    const originalSrc = video.getAttribute('src')
     const p2pVideo = document.createElement('p2p-video')
-    if (video.hasAttribute('src')) {
-      const originalSrc = video.getAttribute('src')
-      p2pVideo.setAttribute('src', originalSrc)
-    }
-    Array.from(video.children).forEach(source => {
-      if (source.tagName === 'SOURCE') {
-        const originalSrc = source.getAttribute('src')
-        console.log(`Original video src: ${originalSrc}`)
-        const srcType = source.getAttribute('type')
-        const p2pSource = document.createElement('source')
-        p2pSource.setAttribute('src', originalSrc)
-        p2pSource.setAttribute('type', srcType)
-        p2pVideo.appendChild(p2pSource)
-        console.log(`Replaced video with p2p-video having src: ${p2pSource.getAttribute('src')}`)
-      }
+    p2pVideo.setAttribute('src', originalSrc)
+
+    p2pVideo.addEventListener('load-error', (event) => {
+      console.log(`Error loading video at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
+      p2pVideo.setAttribute('src', event.detail.fallbackSrc)
+      console.log('Updated p2p-video src after fallback:', p2pVideo.getAttribute('src'))
     })
+
     video.parentNode.replaceChild(p2pVideo, video)
   })
+
+  await Promise.all([...imgPromises, ...videoPromises])
 
   return contentDOM.body.innerHTML
 }
@@ -98,7 +97,7 @@ class DistributedPost extends HTMLElement {
     try {
       const content = await db.getNote(postUrl)
       if (content && content.content) {
-        content.content = insertImagesAndVideos(content.content) // Resolve URLs before rendering
+        content.content = await insertImagesAndVideos(content.content) // Resolve URLs before rendering
         // Assuming JSON-LD content has a "summary" field
         this.renderPostContent(content)
       }
@@ -363,7 +362,6 @@ class ActorInfo extends HTMLElement {
   }
 
   async fetchAndRenderActorInfo (url) {
-    url = await resolveP2PUrl(url)
     try {
       const actorInfo = await db.getActor(url)
       if (actorInfo) {
@@ -386,12 +384,12 @@ class ActorInfo extends HTMLElement {
           }
         }
 
-        const img = document.createElement('img')
-        img.classList.add('actor-icon')
-        img.src = resolveP2PUrl(iconUrl)
-        img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
-        img.addEventListener('click', this.navigateToActorProfile.bind(this))
-        author.appendChild(img)
+        const p2pImage = document.createElement('p2p-image')
+        p2pImage.className = 'actor-icon'
+        p2pImage.setAttribute('src', iconUrl)
+        p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
+        p2pImage.addEventListener('click', this.navigateToActorProfile.bind(this))
+        author.appendChild(p2pImage)
 
         if (actorInfo.name) {
           const pName = document.createElement('div')

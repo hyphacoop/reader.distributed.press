@@ -50,6 +50,7 @@ class ActorMiniProfile extends HTMLElement {
     // Actor icon
     const p2pImage = document.createElement('p2p-image')
     p2pImage.className = 'profile-mini-icon'
+    p2pImage.setAttribute('src', iconUrl)
     p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
     clickableContainer.appendChild(p2pImage)
 

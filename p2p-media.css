@@ -1,0 +1,31 @@
+p2p-image,
+p2p-video {
+  max-width: 100%;
+}
+
+.profile-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #000000;
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+  
+
+.profile-mini-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: #000000;
+    margin-right: 6px;
+  }
+
+  .actor-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #000000;
+    margin-right: 8px;
+    cursor: pointer;
+  }
