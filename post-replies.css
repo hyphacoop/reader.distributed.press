@@ -1,0 +1,11 @@
+.reply-count {
+  text-align: right;
+  align-self: flex-end;
+}
+
+.reply-count-link{
+    color: var(--rdp-details-color);
+  }
+.reply-count-link:hover{
+    text-decoration: none;
+}

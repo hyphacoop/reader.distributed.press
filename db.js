@@ -209,18 +209,14 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    let count = 0
-    const direction = sort > 0 ? 'next' : (sort === 0 ? 'next' : 'prev') // 'prev' for descending order
-    let cursor = null
-
-    const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
-
+    const indexName = inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
     const index = tx.store.index(indexName)
+    const direction = sort > 0 ? 'next' : 'prev'
+    let cursor = await index.openCursor(null, direction)
 
     if (sort === 0) { // Random sort
-      // TODO: Consider removing duplicates in the future to improve UX
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
@@ -235,14 +231,15 @@ export class ActivityPubDB extends EventTarget {
     } else {
       if (attributedTo) {
         cursor = await index.openCursor([attributedTo], direction)
+      } else if (inReplyTo) {
+        cursor = await index.openCursor(inReplyTo, direction)
       } else {
         cursor = await index.openCursor(null, direction)
       }
 
-      // Skip the required entries
       if (skip) await cursor.advance(skip)
 
-      // Collect the required limit of entries
+      let count = 0
       while (cursor) {
         if (count >= limit) break
         count++
@@ -343,6 +340,24 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
+  // Method to iterate replies directly from the collection URL without ingestion
+  async * iterateRepliesCollection (collectionOrUrl) {
+    const collection = await this.#get(collectionOrUrl)
+    console.log(collection)
+    let items = collection.orderedItems || collection.items || []
+    let next = collection.first
+
+    while (next) {
+      const page = await this.#get(next)
+      next = page.next
+      items = page.orderedItems || page.items
+      console.log(items)
+      for await (const item of this.#getAll(items)) {
+        yield item
+      }
+    }
+  }
+
   async * #getAll (items) {
     for (const itemOrUrl of items) {
       const item = await this.#get(itemOrUrl)
@@ -416,7 +431,12 @@ export class ActivityPubDB extends EventTarget {
       await this.db.put(NOTES_STORE, note)
     }
     // If the existing note is newer, do not replace it
-    // TODO: Loop through replies
+
+    console.log(note.replies)
+    if (note.replies && typeof note.replies === 'string') {
+      console.log('Attempting to load replies for:', note.id)
+      await this.ingestActivityCollection(note.replies, note.attributedTo, true)
+    }
   }
 
   async deleteNote (url) {
@@ -502,6 +522,12 @@ export class ActivityPubDB extends EventTarget {
     return followedActors.length > 0
   }
 
+  async replyCount (inReplyTo) {
+    const tx = this.db.transaction(NOTES_STORE, 'readonly')
+    const count = await tx.store.index(IN_REPLY_TO_FIELD).count(inReplyTo)
+    return count
+  }
+
   async setTheme (themeName) {
     await this.db.put('settings', { key: 'theme', value: themeName })
   }
@@ -531,6 +557,7 @@ function upgrade (db) {
     autoIncrement: false
   })
   notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
+  notes.createIndex(IN_REPLY_TO_FIELD, IN_REPLY_TO_FIELD, { unique: false })
   notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
   addRegularIndex(notes, TO_FIELD)
   addRegularIndex(notes, URL_FIELD)
