@@ -50,7 +50,7 @@ export class ActivityPubDB extends EventTarget {
   }
 
   static async load (name = DEFAULT_DB, fetch = globalThis.fetch) {
-    const db = await openDB(name, 2, {
+    const db = await openDB(name, 3, {
       upgrade
     })
 
@@ -209,14 +209,15 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const indexName = inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
+    const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
+    console.log('Using index:', indexName)
     const index = tx.store.index(indexName)
     const direction = sort > 0 ? 'next' : 'prev'
     let cursor = await index.openCursor(null, direction)
 
-    if (sort === 0) { // Random sort
+    if (sort === 0) {
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
@@ -229,7 +230,9 @@ export class ActivityPubDB extends EventTarget {
         }
       }
     } else {
-      if (attributedTo) {
+      if (timeline) {
+        cursor = await index.openCursor([timeline], direction)
+      } else if (attributedTo) {
         cursor = await index.openCursor([attributedTo], direction)
       } else if (inReplyTo) {
         cursor = await index.openCursor(inReplyTo, direction)
@@ -255,6 +258,15 @@ export class ActivityPubDB extends EventTarget {
     console.log(`Starting ingestion for actor from URL: ${url}`)
     const actor = await this.getActor(url)
     console.log('Actor received:', actor)
+
+    // Add 'following' to timeline if the actor is followed
+    const isFollowing = await this.isActorFollowed(url)
+    if (isFollowing) {
+      for await (const note of this.searchNotes({ attributedTo: actor.id })) {
+        note.timeline.push('following')
+        await this.db.put(NOTES_STORE, note)
+      }
+    }
 
     // If actor has an 'outbox', ingest it as a collection
     if (actor.outbox) {
@@ -340,24 +352,6 @@ export class ActivityPubDB extends EventTarget {
     }
   }
 
-  // Method to iterate replies directly from the collection URL without ingestion
-  async * iterateRepliesCollection (collectionOrUrl) {
-    const collection = await this.#get(collectionOrUrl)
-    console.log(collection)
-    let items = collection.orderedItems || collection.items || []
-    let next = collection.first
-
-    while (next) {
-      const page = await this.#get(next)
-      next = page.next
-      items = page.orderedItems || page.items
-      console.log(items)
-      for await (const item of this.#getAll(items)) {
-        yield item
-      }
-    }
-  }
-
   async * #getAll (items) {
     for (const itemOrUrl of items) {
       const item = await this.#get(itemOrUrl)
@@ -414,10 +408,20 @@ export class ActivityPubDB extends EventTarget {
 
   async ingestNote (note) {
     console.log('Ingesting note', note)
+
     // Convert needed fields to date
     note.published = new Date(note.published)
     // Add tag_names field
     note.tag_names = (note.tags || []).map(({ name }) => name)
+
+    // Add timeline field
+    note.timeline = ['all']
+
+    const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
+    if (isFollowingAuthor) {
+      note.timeline.push('following')
+    }
+
     // Try to retrieve an existing note from the database
     const existingNote = await this.db.get(NOTES_STORE, note.id)
     console.log(existingNote)
@@ -435,7 +439,16 @@ export class ActivityPubDB extends EventTarget {
     console.log(note.replies)
     if (note.replies && typeof note.replies === 'string') {
       console.log('Attempting to load replies for:', note.id)
-      await this.ingestActivityCollection(note.replies, note.attributedTo, true)
+      try {
+        await this.ingestActivityCollection(note.replies, note.attributedTo, true)
+      } catch (error) {
+        console.error(`Failed to ingest replies for ${note.id}:`, error)
+      }
+    } else if (note.replies && note.replies.items) {
+      console.log('Processing embedded replies for:', note.id)
+      for (const reply of note.replies.items) {
+        await this.ingestActivity(reply)
+      }
     }
   }
 
@@ -538,43 +551,71 @@ export class ActivityPubDB extends EventTarget {
   }
 }
 
-function upgrade (db) {
-  const actors = db.createObjectStore(ACTORS_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
+async function migrateNotes (db) {
+  const tx = db.transaction(NOTES_STORE, 'readwrite')
+  const store = tx.objectStore(NOTES_STORE)
 
-  actors.createIndex(CREATED_FIELD, CREATED_FIELD)
-  actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
-  actors.createIndex(URL_FIELD, URL_FIELD)
+  for await (const cursor of store) {
+    const note = cursor.value
+    if (!note.timeline) {
+      note.timeline = ['all']
+      cursor.update(note)
+    }
+  }
 
-  db.createObjectStore(FOLLOWED_ACTORS_STORE, {
-    keyPath: 'url'
-  })
+  await tx.done
+}
 
-  const notes = db.createObjectStore(NOTES_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
-  notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
-  notes.createIndex(IN_REPLY_TO_FIELD, IN_REPLY_TO_FIELD, { unique: false })
-  notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
-  addRegularIndex(notes, TO_FIELD)
-  addRegularIndex(notes, URL_FIELD)
-  addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
-  addSortedIndex(notes, IN_REPLY_TO_FIELD)
-  addSortedIndex(notes, ATTRIBUTED_TO_FIELD)
-  addSortedIndex(notes, CONVERSATION_FIELD)
-  addSortedIndex(notes, TO_FIELD)
+async function upgrade (db, oldVersion, newVersion, transaction) {
+  if (oldVersion < 1) {
+    const actors = db.createObjectStore(ACTORS_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
 
-  const activities = db.createObjectStore(ACTIVITIES_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
-  activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
-  addSortedIndex(activities, ACTOR_FIELD)
-  addSortedIndex(activities, TO_FIELD)
-  addRegularIndex(activities, PUBLISHED_FIELD)
+    actors.createIndex(CREATED_FIELD, CREATED_FIELD)
+    actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
+    actors.createIndex(URL_FIELD, URL_FIELD)
+
+    db.createObjectStore(FOLLOWED_ACTORS_STORE, {
+      keyPath: 'url'
+    })
+
+    const notes = db.createObjectStore(NOTES_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
+    notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
+    notes.createIndex(IN_REPLY_TO_FIELD, IN_REPLY_TO_FIELD, { unique: false })
+    notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
+    addRegularIndex(notes, TO_FIELD)
+    addRegularIndex(notes, URL_FIELD)
+    addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
+    addSortedIndex(notes, IN_REPLY_TO_FIELD)
+    addSortedIndex(notes, ATTRIBUTED_TO_FIELD)
+    addSortedIndex(notes, CONVERSATION_FIELD)
+    addSortedIndex(notes, TO_FIELD)
+
+    const activities = db.createObjectStore(ACTIVITIES_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
+    activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
+    addSortedIndex(activities, ACTOR_FIELD)
+    addSortedIndex(activities, TO_FIELD)
+    addRegularIndex(activities, PUBLISHED_FIELD)
+
+    db.createObjectStore('settings', { keyPath: 'key' })
+  }
+
+  if (oldVersion < 2) {
+    await migrateNotes(db)
+  }
+
+  if (oldVersion < 3) {
+    const notes = transaction.objectStore(NOTES_STORE)
+    notes.createIndex('timeline, published', ['timeline', PUBLISHED_FIELD], { unique: false })
+  }
 
   function addRegularIndex (store, field, options = {}) {
     store.createIndex(field, field, options)
@@ -582,8 +623,6 @@ function upgrade (db) {
   function addSortedIndex (store, field, options = {}) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
-
-  db.createObjectStore('settings', { keyPath: 'key' })
 }
 
 // TODO: prefer p2p alternate links when possible

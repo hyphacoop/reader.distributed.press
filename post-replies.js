@@ -17,7 +17,7 @@ class PostReplies extends HTMLElement {
       // Check if the note has a replies collection and use it if available
       const note = await db.getNote(postUrl)
       if (note.replies && typeof note.replies === 'string') {
-        for await (const reply of db.iterateRepliesCollection(note.replies)) {
+        for await (const reply of db.iterateCollection(note.replies, { limit: Infinity })) {
           replies.push(reply)
         }
       } else {

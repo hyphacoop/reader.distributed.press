@@ -94,18 +94,11 @@ class ReaderTimeline extends HTMLElement {
     this.loadMoreBtnWrapper.remove()
     let count = 0
 
-    if (this.sort === 'random') {
-      for await (const note of db.searchNotes({}, { limit: this.limit, sort: this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1) })) {
+    const notesToShow = await this.fetchSortedNotes()
+    for (const note of notesToShow) {
+      if (note) {
         this.appendNoteElement(note)
         count++
-      }
-    } else {
-      const notesToShow = await this.fetchSortedNotes()
-      for (const note of notesToShow) {
-        if (note) {
-          this.appendNoteElement(note)
-          count++
-        }
       }
     }
 
@@ -114,7 +107,7 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async fetchSortedNotes () {
-    const notesGenerator = db.searchNotes({}, { skip: this.skip, limit: this.limit, sort: this.sort === 'oldest' ? 1 : -1 })
+    const notesGenerator = db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: this.sort === 'oldest' ? 1 : -1 })
     const notes = []
     for await (const note of notesGenerator) {
       notes.push(note)
