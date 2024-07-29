@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import DOMPurify from './dependencies/dompurify/purify.js'
 
 class ActorProfile extends HTMLElement {
   static get observedAttributes () {
@@ -96,7 +97,7 @@ class ActorProfile extends HTMLElement {
     if (actorInfo.summary) {
       const pUserSummary = document.createElement('div')
       pUserSummary.classList.add('profile-summary')
-      pUserSummary.textContent = `${actorInfo.summary}`
+      pUserSummary.innerHTML = DOMPurify.sanitize(actorInfo.summary)
       actorContainer.appendChild(pUserSummary) // Append to the actor container
     }
 
