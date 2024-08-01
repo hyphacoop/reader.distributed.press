@@ -94,32 +94,16 @@ class ReaderTimeline extends HTMLElement {
     this.loadMoreBtnWrapper.remove()
     let count = 0
 
-    if (this.sort === 'random') {
-      for await (const note of db.searchNotes({}, { limit: this.limit, sort: this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1) })) {
-        this.appendNoteElement(note)
-        count++
-      }
-    } else {
-      const notesToShow = await this.fetchSortedNotes()
-      for (const note of notesToShow) {
-        if (note) {
-          this.appendNoteElement(note)
-          count++
-        }
-      }
+    const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
+
+    // Fetch notes and render them as they become available
+    for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
+      this.appendNoteElement(note)
+      count++
     }
 
     this.updateHasMore(count)
     this.appendLoadMoreIfNeeded()
-  }
-
-  async fetchSortedNotes () {
-    const notesGenerator = db.searchNotes({}, { skip: this.skip, limit: this.limit, sort: this.sort === 'oldest' ? 1 : -1 })
-    const notes = []
-    for await (const note of notesGenerator) {
-      notes.push(note)
-    }
-    return notes
   }
 
   updateHasMore (count) {

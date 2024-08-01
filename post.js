@@ -1,6 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
+import './post-replies.js'
 
 function formatDate (dateString) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -233,6 +234,16 @@ class DistributedPost extends HTMLElement {
     // Append the date container to the footer
     postFooter.appendChild(dateContainer)
 
+    const replyFooter = document.createElement('div')
+    replyFooter.classList.add('reply-footer')
+
+    const replyCountElement = document.createElement('reply-count')
+    replyCountElement.classList.add('reply-count')
+    replyCountElement.setAttribute('url', jsonLdData.id)
+    replyFooter.appendChild(replyCountElement)
+
+    postFooter.appendChild(replyFooter)
+
     // Handle attachments of other Fedi instances
     if (!isSensitive && !jsonLdData.summary && jsonLdData.attachment && jsonLdData.attachment.length > 0) {
       const attachmentsContainer = document.createElement('div')
@@ -264,6 +275,13 @@ class DistributedPost extends HTMLElement {
 
     // Append the whole post container to the custom element
     this.appendChild(postContainer)
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('view') === 'replies') {
+      const postReplies = document.createElement('post-replies')
+      postReplies.setAttribute('url', jsonLdData.id)
+      this.after(postReplies)
+    }
   }
 
   // appendField to optionally allow HTML content
