@@ -442,7 +442,7 @@ export class ActivityPubDB extends EventTarget {
     // If the existing note is newer, do not replace it
 
     console.log(note.replies)
-    if (note.replies && typeof note.replies === 'string') {
+    if (note.replies) {
       console.log('Attempting to load replies for:', note.id)
       try {
         await this.ingestReplies(note.replies)
@@ -455,11 +455,8 @@ export class ActivityPubDB extends EventTarget {
   async ingestReplies (url) {
     console.log('Ingesting replies for URL:', url)
     try {
-      const repliesCollection = await this.#get(url)
-      if (repliesCollection.items || repliesCollection.orderedItems) {
-        for await (const note of this.iterateCollection(repliesCollection, { limit: Infinity })) {
-          await this.ingestNote(note)
-        }
+      for await (const note of this.iterateCollection(url, { limit: Infinity })) {
+        await this.ingestNote(note)
       }
     } catch (error) {
       console.error('Error ingesting replies:', error)
@@ -550,8 +547,15 @@ export class ActivityPubDB extends EventTarget {
   }
 
   async replyCount (inReplyTo) {
+    console.log(`Counting replies for ${inReplyTo}`)
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const count = await tx.store.index(IN_REPLY_TO_FIELD).count(inReplyTo)
+    const store = tx.objectStore(NOTES_STORE)
+
+    // Check if the index is correctly setup
+    const index = store.index(IN_REPLY_TO_FIELD)
+
+    const count = await index.count(inReplyTo)
+    console.log(`Found ${count} replies for ${inReplyTo}`)
     return count
   }
 
