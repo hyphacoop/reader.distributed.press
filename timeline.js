@@ -107,7 +107,8 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async fetchSortedNotes () {
-    const notesGenerator = db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: this.sort === 'oldest' ? 1 : -1 })
+    const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
+    const notesGenerator = db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })
     const notes = []
     for await (const note of notesGenerator) {
       notes.push(note)

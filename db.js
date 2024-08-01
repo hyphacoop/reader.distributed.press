@@ -42,6 +42,9 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
+const TIMELINE_ALL = 'all'
+const TIMELINE_FOLLOWING = 'following'
+
 export class ActivityPubDB extends EventTarget {
   constructor (db, fetch = globalThis.fetch) {
     super()
@@ -215,13 +218,12 @@ export class ActivityPubDB extends EventTarget {
     console.log('Using index:', indexName)
     const index = tx.store.index(indexName)
     const direction = sort > 0 ? 'next' : 'prev'
-    let cursor = await index.openCursor(null, direction)
 
-    if (sort === 0) {
+    if (sort === 0) { // Random sort
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
-        cursor = await index.openCursor()
+        const cursor = await index.openCursor(null, 'next')
         if (randomSkip > 0) {
           await cursor.advance(randomSkip)
         }
@@ -230,6 +232,7 @@ export class ActivityPubDB extends EventTarget {
         }
       }
     } else {
+      let cursor
       if (timeline) {
         cursor = await index.openCursor([timeline], direction)
       } else if (attributedTo) {
@@ -245,9 +248,9 @@ export class ActivityPubDB extends EventTarget {
       let count = 0
       while (cursor) {
         if (count >= limit) break
-        count++
         yield cursor.value
         cursor = await cursor.continue()
+        count++
       }
     }
 
@@ -263,8 +266,10 @@ export class ActivityPubDB extends EventTarget {
     const isFollowing = await this.isActorFollowed(url)
     if (isFollowing) {
       for await (const note of this.searchNotes({ attributedTo: actor.id })) {
-        note.timeline.push('following')
-        await this.db.put(NOTES_STORE, note)
+        if (!note.timeline.includes(TIMELINE_FOLLOWING)) {
+          note.timeline.push(TIMELINE_FOLLOWING)
+          await this.db.put(NOTES_STORE, note)
+        }
       }
     }
 
@@ -415,11 +420,11 @@ export class ActivityPubDB extends EventTarget {
     note.tag_names = (note.tags || []).map(({ name }) => name)
 
     // Add timeline field
-    note.timeline = ['all']
+    note.timeline = [TIMELINE_ALL]
 
     const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
     if (isFollowingAuthor) {
-      note.timeline.push('following')
+      note.timeline.push(TIMELINE_FOLLOWING)
     }
 
     // Try to retrieve an existing note from the database
@@ -440,15 +445,24 @@ export class ActivityPubDB extends EventTarget {
     if (note.replies && typeof note.replies === 'string') {
       console.log('Attempting to load replies for:', note.id)
       try {
-        await this.ingestActivityCollection(note.replies, note.attributedTo, true)
+        await this.ingestReplies(note.replies)
       } catch (error) {
         console.error(`Failed to ingest replies for ${note.id}:`, error)
       }
-    } else if (note.replies && note.replies.items) {
-      console.log('Processing embedded replies for:', note.id)
-      for (const reply of note.replies.items) {
-        await this.ingestActivity(reply)
+    }
+  }
+
+  async ingestReplies (url) {
+    console.log('Ingesting replies for URL:', url)
+    try {
+      const repliesCollection = await this.#get(url)
+      if (repliesCollection.items || repliesCollection.orderedItems) {
+        for await (const note of this.iterateCollection(repliesCollection, { limit: Infinity })) {
+          await this.ingestNote(note)
+        }
       }
+    } catch (error) {
+      console.error('Error ingesting replies:', error)
     }
   }
 
@@ -551,19 +565,20 @@ export class ActivityPubDB extends EventTarget {
   }
 }
 
-async function migrateNotes (db) {
-  const tx = db.transaction(NOTES_STORE, 'readwrite')
-  const store = tx.objectStore(NOTES_STORE)
+async function migrateNotes (db, transaction) {
+  const store = transaction.objectStore(NOTES_STORE)
 
   for await (const cursor of store) {
     const note = cursor.value
     if (!note.timeline) {
       note.timeline = ['all']
-      cursor.update(note)
     }
+    const isFollowing = await db.isActorFollowed(note.attributedTo)
+    if (isFollowing && !note.timeline.includes(TIMELINE_FOLLOWING)) {
+      note.timeline.push(TIMELINE_FOLLOWING)
+    }
+    cursor.update(note)
   }
-
-  await tx.done
 }
 
 async function upgrade (db, oldVersion, newVersion, transaction) {
@@ -609,7 +624,7 @@ async function upgrade (db, oldVersion, newVersion, transaction) {
   }
 
   if (oldVersion < 2) {
-    await migrateNotes(db)
+    await migrateNotes(db, transaction)
   }
 
   if (oldVersion < 3) {

@@ -13,19 +13,19 @@ class PostReplies extends HTMLElement {
   async loadReplies (postUrl) {
     const replies = []
     console.log('Loading replies for URL:', postUrl)
+
     try {
-      // Check if the note has a replies collection and use it if available
+      // Get the main note
       const note = await db.getNote(postUrl)
-      if (note.replies && typeof note.replies === 'string') {
-        for await (const reply of db.iterateCollection(note.replies, { limit: Infinity })) {
-          replies.push(reply)
-        }
-      } else {
-        // Fallback to searchNotes with inReplyTo
-        for await (const reply of db.searchNotes({ inReplyTo: postUrl })) {
-          replies.push(reply)
-        }
+
+      // Ingest the main note to ensure it's properly processed and stored
+      await db.ingestNote(note)
+
+      // Use searchNotes to get replies using inReplyTo
+      for await (const reply of db.searchNotes({ inReplyTo: postUrl }, { limit: Infinity })) {
+        replies.push(reply)
       }
+
       if (replies.length === 0) {
         console.log('No replies found for:', postUrl)
       } else {
@@ -34,6 +34,7 @@ class PostReplies extends HTMLElement {
     } catch (error) {
       console.error('Error loading replies:', error)
     }
+
     this.renderReplies(replies)
   }
 
