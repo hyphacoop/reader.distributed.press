@@ -414,12 +414,12 @@ export class ActivityPubDB extends EventTarget {
   async ingestNote (note) {
     console.log('Ingesting note', note)
 
-    // Convert needed fields to date
-    note.published = new Date(note.published)
-    // Add tag_names field
-    note.tag_names = (note.tags || []).map(({ name }) => name)
+    if (typeof note === 'string') {
+      note = await this.getNote(note) // Fetch the note if it's just a URL string
+    }
 
-    // Add timeline field
+    note.published = new Date(note.published) // Convert published to Date
+    note.tag_names = (note.tags || []).map(({ name }) => name) // Extract tag names
     note.timeline = [TIMELINE_ALL]
 
     const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
@@ -427,36 +427,28 @@ export class ActivityPubDB extends EventTarget {
       note.timeline.push(TIMELINE_FOLLOWING)
     }
 
-    // Try to retrieve an existing note from the database
     const existingNote = await this.db.get(NOTES_STORE, note.id)
-    console.log(existingNote)
-    // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
       console.log(`Updating note with newer version: ${note.id}`)
       await this.db.put(NOTES_STORE, note)
     } else if (!existingNote) {
-      // If no existing note, just add the new note
       console.log(`Adding new note: ${note.id}`)
       await this.db.put(NOTES_STORE, note)
     }
-    // If the existing note is newer, do not replace it
 
-    console.log(note.replies)
+    // Handle replies recursively
     if (note.replies) {
       console.log('Attempting to load replies for:', note.id)
-      try {
-        await this.ingestReplies(note.replies)
-      } catch (error) {
-        console.error(`Failed to ingest replies for ${note.id}:`, error)
-      }
+      await this.ingestReplies(note.replies)
     }
   }
 
   async ingestReplies (url) {
     console.log('Ingesting replies for URL:', url)
     try {
-      for await (const note of this.iterateCollection(url, { limit: Infinity })) {
-        await this.ingestNote(note)
+      const replies = await this.iterateCollection(url, { limit: Infinity })
+      for await (const reply of replies) {
+        await this.ingestNote(reply) // Recursively ingest replies
       }
     } catch (error) {
       console.error('Error ingesting replies:', error)
@@ -548,6 +540,7 @@ export class ActivityPubDB extends EventTarget {
 
   async replyCount (inReplyTo) {
     console.log(`Counting replies for ${inReplyTo}`)
+    await this.ingestNote(inReplyTo) // Ensure the note and its replies are ingested before counting
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     const store = tx.objectStore(NOTES_STORE)
 

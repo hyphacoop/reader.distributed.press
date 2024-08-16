@@ -1,5 +1,4 @@
 import { db } from './dbInstance.js'
-import DOMPurify from './dependencies/dompurify/purify.js'
 
 class PostReplies extends HTMLElement {
   static get observedAttributes () {
@@ -40,12 +39,10 @@ class PostReplies extends HTMLElement {
 
   renderReplies (replies) {
     this.innerHTML = '' // Clear existing content
-    if (replies.length === 0) {
-      this.textContent = 'No replies'
-    } else {
+    if (replies.length > 0) {
       replies.forEach(reply => {
-        const replyElement = document.createElement('div')
-        replyElement.innerHTML = DOMPurify.sanitize(reply.content)
+        const replyElement = document.createElement('distributed-post')
+        replyElement.setAttribute('url', reply.id)
         this.appendChild(replyElement)
       })
     }
@@ -78,7 +75,7 @@ class ReplyCount extends HTMLElement {
     this.innerHTML = ''
     const replyCountElement = document.createElement('a')
     replyCountElement.classList.add('reply-count-link')
-    replyCountElement.textContent = `${count} replies`
+    replyCountElement.textContent = `${count} ${count === 1 ? 'reply' : 'replies'}`
     replyCountElement.href = `/post.html?url=${encodeURIComponent(postUrl)}&view=replies`
     this.appendChild(replyCountElement)
   }
