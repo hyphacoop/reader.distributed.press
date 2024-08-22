@@ -87,7 +87,7 @@
   font-size: 16px;
   color: var(--rdp-text-color);
   padding: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   overflow-wrap: break-word;
 }
 
@@ -99,8 +99,10 @@
   text-decoration: none;
 }
 
-.post-footer {
-  margin-top: 10px;
+.post-footer, .reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.875rem;
   color: var(--rdp-details-color);
 }
