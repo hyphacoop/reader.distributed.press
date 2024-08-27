@@ -215,15 +215,15 @@ export class ActivityPubDB extends EventTarget {
   async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
-    console.log('Using index:', indexName)
     const index = tx.store.index(indexName)
     const direction = sort > 0 ? 'next' : 'prev'
+    let cursor = await index.openCursor(null, direction)
 
     if (sort === 0) { // Random sort
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
-        const cursor = await index.openCursor(null, 'next')
+        cursor = await index.openCursor()
         if (randomSkip > 0) {
           await cursor.advance(randomSkip)
         }
@@ -232,8 +232,8 @@ export class ActivityPubDB extends EventTarget {
         }
       }
     } else {
-      let cursor
       if (timeline) {
+        // Ensure we're not fetching replies for the timeline
         cursor = await index.openCursor([timeline], direction)
       } else if (attributedTo) {
         cursor = await index.openCursor([attributedTo], direction)
@@ -248,9 +248,9 @@ export class ActivityPubDB extends EventTarget {
       let count = 0
       while (cursor) {
         if (count >= limit) break
+        count++
         yield cursor.value
         cursor = await cursor.continue()
-        count++
       }
     }
 
@@ -423,7 +423,9 @@ export class ActivityPubDB extends EventTarget {
     note.timeline = [TIMELINE_ALL]
 
     const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
-    if (isFollowingAuthor) {
+
+    // Only add to the 'following' timeline if it's not a reply
+    if (isFollowingAuthor && !note.inReplyTo) {
       note.timeline.push(TIMELINE_FOLLOWING)
     }
 

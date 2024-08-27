@@ -98,8 +98,11 @@ class ReaderTimeline extends HTMLElement {
 
     // Fetch notes and render them as they become available
     for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
-      this.appendNoteElement(note)
-      count++
+      // Exclude replies from appearing in the timeline
+      if (!note.inReplyTo) {
+        this.appendNoteElement(note)
+        count++
+      }
     }
 
     this.updateHasMore(count)
