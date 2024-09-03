@@ -55,12 +55,10 @@ class P2PImage extends HTMLElement {
   }
 
   handleError (src) {
-    if (isP2P(src)) {
-      const fallbackSrc = resolveP2PUrl(src)
-      this.img.src = fallbackSrc
-      this.setAttribute('src', fallbackSrc)
-      this.dispatchEvent(new CustomEvent('load-error', { detail: { fallbackSrc } }))
-    }
+    const fallbackSrc = isP2P(src) ? resolveP2PUrl(src) : './assets/profile.png'
+    this.img.src = fallbackSrc
+    this.setAttribute('src', fallbackSrc)
+    this.dispatchEvent(new CustomEvent('load-error', { detail: { fallbackSrc } }))
   }
 
   clearAndAppend (element) {
