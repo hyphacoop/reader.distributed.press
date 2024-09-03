@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <title>Reader Post</title>
 <style>
-  @import url("../post.css");
   @import url("../common.css");
+  @import url("../post.css");
+  @import url("../post-replies.css");
 </style>
 <div id="post-container">
   <!-- https://staticpub.mauve.moe/helloworld.html -->
@@ -16,7 +17,7 @@
 <script>
   const params = new URLSearchParams(window.location.search);
   // Fallback to a default URL for testing if the parameter is not available
-  const defaultPostUrl = "ipns://hypha.coop/dripline/announcing-dp-social-inbox.ipns.jsonld";
+  const defaultPostUrl = "https://mastodon.mauve.moe/users/mauve/statuses/112690528242160776/";
   const postUrl = params.get("url") || defaultPostUrl;
 
   if (postUrl) {

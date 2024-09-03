@@ -34,6 +34,12 @@ export const IPNS_PREFIX = 'ipns://'
 const ACCEPT_HEADER =
 'application/activity+json, application/ld+json, application/json, text/html'
 
+const TIMELINE_ALL = 'all'
+const TIMELINE_FOLLOWING = 'following'
+
+// Global cache to store protocol reachability
+const protocolSupportMap = new Map()
+
 // TODO: When ingesting notes and actors, wrap any dates in `new Date()`
 // TODO: When ingesting notes add a "tag_names" field which is just the names of the tag
 // TODO: When ingesting notes, also load their replies
@@ -41,9 +47,6 @@ const ACCEPT_HEADER =
 export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
-
-// Global cache to store protocol reachability
-const protocolSupportMap = new Map()
 
 export async function supportsP2P (url) {
   const urlObject = new URL(url)
@@ -90,7 +93,7 @@ export class ActivityPubDB extends EventTarget {
   }
 
   static async load (name = DEFAULT_DB, fetch = globalThis.fetch) {
-    const db = await openDB(name, 2, {
+    const db = await openDB(name, 3, {
       upgrade
     })
 
@@ -205,12 +208,12 @@ export class ActivityPubDB extends EventTarget {
   async getNote (url) {
     try {
       const note = await this.db.get(NOTES_STORE, url)
-      if (!note) throw new Error('Not loaded')
-      return note
-    } catch {
+      if (!note) throw new Error('Note not loaded')
+      return note // Simply return the locally found note.
+    } catch (error) {
+      // If the note is not in the local store, fetch it but don't automatically ingest it.
       const note = await this.#get(url)
-      await this.ingestNote(note)
-      return note
+      return note // Return the fetched note for further processing by the caller.
     }
   }
 
@@ -250,22 +253,18 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    let count = 0
-    const direction = sort > 0 ? 'next' : (sort === 0 ? 'next' : 'prev') // 'prev' for descending order
-    let cursor = null
-
-    const indexName = attributedTo ? ATTRIBUTED_TO_FIELD + ', published' : PUBLISHED_FIELD
-
+    const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
+    console.log('Using index:', indexName)
     const index = tx.store.index(indexName)
+    const direction = sort > 0 ? 'next' : 'prev'
 
     if (sort === 0) { // Random sort
-      // TODO: Consider removing duplicates in the future to improve UX
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
-        cursor = await index.openCursor()
+        const cursor = await index.openCursor(null, 'next')
         if (randomSkip > 0) {
           await cursor.advance(randomSkip)
         }
@@ -274,21 +273,25 @@ export class ActivityPubDB extends EventTarget {
         }
       }
     } else {
-      if (attributedTo) {
+      let cursor
+      if (timeline) {
+        cursor = await index.openCursor([timeline], direction)
+      } else if (attributedTo) {
         cursor = await index.openCursor([attributedTo], direction)
+      } else if (inReplyTo) {
+        cursor = await index.openCursor(inReplyTo, direction)
       } else {
         cursor = await index.openCursor(null, direction)
       }
 
-      // Skip the required entries
       if (skip) await cursor.advance(skip)
 
-      // Collect the required limit of entries
+      let count = 0
       while (cursor) {
         if (count >= limit) break
-        count++
         yield cursor.value
         cursor = await cursor.continue()
+        count++
       }
     }
 
@@ -299,6 +302,17 @@ export class ActivityPubDB extends EventTarget {
     console.log(`Starting ingestion for actor from URL: ${url}`)
     const actor = await this.getActor(url)
     console.log('Actor received:', actor)
+
+    // Add 'following' to timeline if the actor is followed
+    const isFollowing = await this.isActorFollowed(url)
+    if (isFollowing) {
+      for await (const note of this.searchNotes({ attributedTo: actor.id })) {
+        if (!note.timeline.includes(TIMELINE_FOLLOWING)) {
+          note.timeline.push(TIMELINE_FOLLOWING)
+          await this.db.put(NOTES_STORE, note)
+        }
+      }
+    }
 
     // If actor has an 'outbox', ingest it as a collection
     if (actor.outbox) {
@@ -419,11 +433,16 @@ export class ActivityPubDB extends EventTarget {
     console.log('Ingesting activity:', activity)
     await this.db.put(ACTIVITIES_STORE, activity)
 
-    if (activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) {
+    if ((activity.type === TYPE_CREATE || activity.type === TYPE_UPDATE) && activity.actor) {
       const note = await this.#get(activity.object)
       if (note.type === TYPE_NOTE) {
-        console.log('Ingesting note:', note)
-        await this.ingestNote(note)
+        // Only ingest the note if the note's attributed actor is the same as the activity's actor
+        if (note.attributedTo === activity.actor) {
+          console.log('Ingesting note:', note)
+          await this.ingestNote(note)
+        } else {
+          console.log(`Skipping note ingestion for actor mismatch: Note attributed to ${note.attributedTo}, but activity actor is ${activity.actor}`)
+        }
       }
     } else if (activity.type === TYPE_DELETE) {
       // Handle 'Delete' activity type
@@ -435,24 +454,46 @@ export class ActivityPubDB extends EventTarget {
 
   async ingestNote (note) {
     console.log('Ingesting note', note)
-    // Convert needed fields to date
-    note.published = new Date(note.published)
-    // Add tag_names field
-    note.tag_names = (note.tags || []).map(({ name }) => name)
-    // Try to retrieve an existing note from the database
+
+    if (typeof note === 'string') {
+      note = await this.getNote(note) // Fetch the note if it's just a URL string
+    }
+
+    note.published = new Date(note.published) // Convert published to Date
+    note.tag_names = (note.tags || []).map(({ name }) => name) // Extract tag names
+    note.timeline = [TIMELINE_ALL]
+
+    const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
+    if (isFollowingAuthor) {
+      note.timeline.push(TIMELINE_FOLLOWING)
+    }
+
     const existingNote = await this.db.get(NOTES_STORE, note.id)
-    console.log(existingNote)
-    // If there's an existing note and the incoming note is newer, update it
     if (existingNote && new Date(note.published) > new Date(existingNote.published)) {
       console.log(`Updating note with newer version: ${note.id}`)
       await this.db.put(NOTES_STORE, note)
     } else if (!existingNote) {
-      // If no existing note, just add the new note
       console.log(`Adding new note: ${note.id}`)
       await this.db.put(NOTES_STORE, note)
     }
-    // If the existing note is newer, do not replace it
-    // TODO: Loop through replies
+
+    // Handle replies recursively
+    if (note.replies) {
+      console.log('Attempting to load replies for:', note.id)
+      await this.ingestReplies(note.replies)
+    }
+  }
+
+  async ingestReplies (url) {
+    console.log('Ingesting replies for URL:', url)
+    try {
+      const replies = await this.iterateCollection(url, { limit: Infinity })
+      for await (const reply of replies) {
+        await this.ingestNote(reply) // Recursively ingest replies
+      }
+    } catch (error) {
+      console.error('Error ingesting replies:', error)
+    }
   }
 
   async deleteNote (url) {
@@ -538,6 +579,20 @@ export class ActivityPubDB extends EventTarget {
     return followedActors.length > 0
   }
 
+  async replyCount (inReplyTo) {
+    console.log(`Counting replies for ${inReplyTo}`)
+    await this.ingestNote(inReplyTo) // Ensure the note and its replies are ingested before counting
+    const tx = this.db.transaction(NOTES_STORE, 'readonly')
+    const store = tx.objectStore(NOTES_STORE)
+
+    // Check if the index is correctly setup
+    const index = store.index(IN_REPLY_TO_FIELD)
+
+    const count = await index.count(inReplyTo)
+    console.log(`Found ${count} replies for ${inReplyTo}`)
+    return count
+  }
+
   async setTheme (themeName) {
     await this.db.put('settings', { key: 'theme', value: themeName })
   }
@@ -548,42 +603,72 @@ export class ActivityPubDB extends EventTarget {
   }
 }
 
-function upgrade (db) {
-  const actors = db.createObjectStore(ACTORS_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
+async function migrateNotes (db, transaction) {
+  const store = transaction.objectStore(NOTES_STORE)
 
-  actors.createIndex(CREATED_FIELD, CREATED_FIELD)
-  actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
-  actors.createIndex(URL_FIELD, URL_FIELD)
+  for await (const cursor of store) {
+    const note = cursor.value
+    if (!note.timeline) {
+      note.timeline = ['all']
+    }
+    const isFollowing = await db.isActorFollowed(note.attributedTo)
+    if (isFollowing && !note.timeline.includes(TIMELINE_FOLLOWING)) {
+      note.timeline.push(TIMELINE_FOLLOWING)
+    }
+    cursor.update(note)
+  }
+}
 
-  db.createObjectStore(FOLLOWED_ACTORS_STORE, {
-    keyPath: 'url'
-  })
+async function upgrade (db, oldVersion, newVersion, transaction) {
+  if (oldVersion < 1) {
+    const actors = db.createObjectStore(ACTORS_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
 
-  const notes = db.createObjectStore(NOTES_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
-  notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
-  notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
-  addRegularIndex(notes, TO_FIELD)
-  addRegularIndex(notes, URL_FIELD)
-  addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
-  addSortedIndex(notes, IN_REPLY_TO_FIELD)
-  addSortedIndex(notes, ATTRIBUTED_TO_FIELD)
-  addSortedIndex(notes, CONVERSATION_FIELD)
-  addSortedIndex(notes, TO_FIELD)
+    actors.createIndex(CREATED_FIELD, CREATED_FIELD)
+    actors.createIndex(UPDATED_FIELD, UPDATED_FIELD)
+    actors.createIndex(URL_FIELD, URL_FIELD)
 
-  const activities = db.createObjectStore(ACTIVITIES_STORE, {
-    keyPath: 'id',
-    autoIncrement: false
-  })
-  activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
-  addSortedIndex(activities, ACTOR_FIELD)
-  addSortedIndex(activities, TO_FIELD)
-  addRegularIndex(activities, PUBLISHED_FIELD)
+    db.createObjectStore(FOLLOWED_ACTORS_STORE, {
+      keyPath: 'url'
+    })
+
+    const notes = db.createObjectStore(NOTES_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
+    notes.createIndex(ATTRIBUTED_TO_FIELD, ATTRIBUTED_TO_FIELD, { unique: false })
+    notes.createIndex(IN_REPLY_TO_FIELD, IN_REPLY_TO_FIELD, { unique: false })
+    notes.createIndex(PUBLISHED_FIELD, PUBLISHED_FIELD, { unique: false })
+    addRegularIndex(notes, TO_FIELD)
+    addRegularIndex(notes, URL_FIELD)
+    addRegularIndex(notes, TAG_NAMES_FIELD, { multiEntry: true })
+    addSortedIndex(notes, IN_REPLY_TO_FIELD)
+    addSortedIndex(notes, ATTRIBUTED_TO_FIELD)
+    addSortedIndex(notes, CONVERSATION_FIELD)
+    addSortedIndex(notes, TO_FIELD)
+
+    const activities = db.createObjectStore(ACTIVITIES_STORE, {
+      keyPath: 'id',
+      autoIncrement: false
+    })
+    activities.createIndex(ACTOR_FIELD, ACTOR_FIELD)
+    addSortedIndex(activities, ACTOR_FIELD)
+    addSortedIndex(activities, TO_FIELD)
+    addRegularIndex(activities, PUBLISHED_FIELD)
+
+    db.createObjectStore('settings', { keyPath: 'key' })
+  }
+
+  if (oldVersion < 2) {
+    await migrateNotes(db, transaction)
+  }
+
+  if (oldVersion < 3) {
+    const notes = transaction.objectStore(NOTES_STORE)
+    notes.createIndex('timeline, published', ['timeline', PUBLISHED_FIELD], { unique: false })
+  }
 
   function addRegularIndex (store, field, options = {}) {
     store.createIndex(field, field, options)
@@ -591,8 +676,6 @@ function upgrade (db) {
   function addSortedIndex (store, field, options = {}) {
     store.createIndex(field + ', published', [field, PUBLISHED_FIELD], options)
   }
-
-  db.createObjectStore('settings', { keyPath: 'key' })
 }
 
 // TODO: prefer p2p alternate links when possible
