@@ -40,41 +40,29 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
-async function insertImagesAndVideos (content) {
+function insertImagesAndVideos (content) {
   const parser = new DOMParser()
   const contentDOM = parser.parseFromString(content, 'text/html')
 
-  const imgPromises = Array.from(contentDOM.querySelectorAll('img')).map(async (img) => {
+  contentDOM.querySelectorAll('img').forEach(img => {
     const originalSrc = img.getAttribute('src')
     const p2pImg = document.createElement('p2p-image')
     p2pImg.setAttribute('src', originalSrc)
 
-    p2pImg.addEventListener('load-error', (event) => {
-      console.log(`Error loading image at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
-      p2pImg.setAttribute('src', event.detail.fallbackSrc)
-      console.log('Updated p2p-image src after fallback:', p2pImg.getAttribute('src'))
-    })
-
+    // Append the image directly to the parent node
     img.parentNode.replaceChild(p2pImg, img)
-    console.log('Replaced img with p2p-image having initial src:', p2pImg.getAttribute('src'))
   })
 
-  const videoPromises = Array.from(contentDOM.querySelectorAll('video')).map(async (video) => {
+  contentDOM.querySelectorAll('video').forEach(video => {
     const originalSrc = video.getAttribute('src')
     const p2pVideo = document.createElement('p2p-video')
     p2pVideo.setAttribute('src', originalSrc)
 
-    p2pVideo.addEventListener('load-error', (event) => {
-      console.log(`Error loading video at ${originalSrc}, fallback to ${event.detail.fallbackSrc}`)
-      p2pVideo.setAttribute('src', event.detail.fallbackSrc)
-      console.log('Updated p2p-video src after fallback:', p2pVideo.getAttribute('src'))
-    })
-
+    // Append the video directly to the parent node
     video.parentNode.replaceChild(p2pVideo, video)
   })
 
-  await Promise.all([...imgPromises, ...videoPromises])
-
+  // Return the modified content as a string
   return contentDOM.body.innerHTML
 }
 
@@ -97,7 +85,7 @@ class DistributedPost extends HTMLElement {
     try {
       const content = await db.getNote(postUrl)
       if (content && content.content) {
-        content.content = await insertImagesAndVideos(content.content) // Resolve URLs before rendering
+        content.content = insertImagesAndVideos(content.content) // Resolve URLs before rendering
         // Assuming JSON-LD content has a "summary" field
         this.renderPostContent(content)
       }
@@ -155,10 +143,12 @@ class DistributedPost extends HTMLElement {
 
     // Determine content source based on structure of jsonLdData
     const contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
-
     const sanitizedContent = DOMPurify.sanitize(contentSource)
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
+
+    // Insert images and videos into the DOM
+    const processedContent = insertImagesAndVideos(contentSource)
 
     // Process all anchor elements to handle actor and posts mentions
     const anchors = contentDOM.querySelectorAll('a')
@@ -200,28 +190,24 @@ class DistributedPost extends HTMLElement {
       }
     })
 
-    // Determine if the content is marked as sensitive in either the direct jsonLdData or within jsonLdData.object
-    const isSensitive =
-      jsonLdData.sensitive ||
-      (jsonLdData.object && jsonLdData.object.sensitive)
+    const isSensitive = jsonLdData.sensitive || (jsonLdData.object && jsonLdData.object.sensitive)
+    const summary = jsonLdData.summary || (jsonLdData.object && jsonLdData.object.summary)
 
-    const summary =
-      jsonLdData.summary ||
-      (jsonLdData.object && jsonLdData.object.summary)
-
-    // Handle sensitive content
     if (isSensitive) {
+      // Handle sensitive content
       const details = document.createElement('details')
-      const summary = document.createElement('summary')
-      summary.classList.add('cw-summary')
-      summary.textContent = 'Sensitive Content (click to view)'
-      details.appendChild(summary)
-      const content = document.createElement('p')
-      content.innerHTML = DOMPurify.sanitize(contentSource)
-      details.appendChild(content)
+      const summaryElement = document.createElement('summary')
+      summaryElement.classList.add('cw-summary')
+      summaryElement.textContent = 'Sensitive Content (click to view)'
+      details.appendChild(summaryElement)
+
+      const contentElement = document.createElement('p')
+      contentElement.innerHTML = processedContent
+      details.appendChild(contentElement)
+
       postContent.appendChild(details)
     } else if (summary) {
-      // Non-sensitive content with a summary (post title)
+      // Handle content with summary
       const details = document.createElement('details')
       const summaryElement = document.createElement('summary')
       summaryElement.textContent = summary // Post title goes here
@@ -234,7 +220,7 @@ class DistributedPost extends HTMLElement {
       summaryElement.appendChild(toggleText)
 
       const contentElement = document.createElement('p')
-      contentElement.innerHTML = DOMPurify.sanitize(jsonLdData.content)
+      contentElement.innerHTML = processedContent
       details.appendChild(contentElement)
       postContent.appendChild(details)
 
@@ -243,9 +229,8 @@ class DistributedPost extends HTMLElement {
         toggleText.textContent = details.open ? 'Show less' : 'Show more'
       })
     } else {
-      const content = document.createElement('p')
-      content.innerHTML = contentDOM.body.innerHTML
-      postContent.appendChild(content)
+      // Regular content without summary or sensitivity
+      postContent.innerHTML = processedContent
     }
 
     // Append the content to the post container
