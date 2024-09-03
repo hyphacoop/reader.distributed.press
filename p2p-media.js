@@ -1,21 +1,20 @@
 import { supportsP2P, resolveP2PUrl, isP2P } from './db.js'
 
+function addStylesheet () {
+  if (!document.getElementById('p2p-media-styles')) {
+    const style = document.createElement('link')
+    style.id = 'p2p-media-styles'
+    style.rel = 'stylesheet'
+    style.href = './p2p-media.css'
+    document.head.appendChild(style)
+  }
+}
+
 class P2PImage extends HTMLElement {
   constructor () {
     super()
-    this.attachShadow({ mode: 'open' })
-
-    // Create an img element
     this.img = document.createElement('img')
-
-    // Load the CSS file
-    const style = document.createElement('style')
-    fetch('./p2p-media.css').then(response => response.text()).then(css => {
-      style.textContent = css
-      this.shadowRoot.append(style, this.img)
-    })
-
-    this.img.addEventListener('error', () => this.handleError())
+    addStylesheet()
   }
 
   static get observedAttributes () {
@@ -23,35 +22,31 @@ class P2PImage extends HTMLElement {
   }
 
   connectedCallback () {
-    if (this.hasAttribute('src')) {
-      this.loadImage(this.getAttribute('src'))
-    }
-    this.syncClass()
-    this.addEventListener('load-error', e => {
-      console.log(`Handled fallback for src: ${e.detail.fallbackSrc}`)
-    })
+    this.attachImage()
   }
 
   attributeChangedCallback (name, oldValue, newValue) {
     if (name === 'src' && newValue !== oldValue) {
-      this.loadImage(newValue)
-      this.img.src = newValue // Ensure the inner image src is updated immediately
+      this.attachImage(newValue)
     } else if (name === 'class' && newValue !== oldValue) {
       this.syncClass()
     }
   }
 
-  async loadImage (src) {
+  async attachImage (src) {
     try {
+      src = src || this.getAttribute('src')
       const p2pSupported = await supportsP2P(src)
       if (p2pSupported) {
-        this.img.src = src // Attempt to load the original P2P URL
+        this.img.src = src
       } else {
-        this.handleError()
+        this.handleError(src)
       }
     } catch (error) {
-      this.handleError()
+      this.handleError(src)
     }
+    this.syncClass()
+    this.clearAndAppend(this.img)
   }
 
   syncClass () {
@@ -59,35 +54,27 @@ class P2PImage extends HTMLElement {
     this.img.className = classes.join(' ')
   }
 
-  handleError () {
-    const src = this.getAttribute('src')
+  handleError (src) {
     if (isP2P(src)) {
       const fallbackSrc = resolveP2PUrl(src)
-      console.log(`Failed to load, resolving to gateway URL: ${fallbackSrc}`)
       this.img.src = fallbackSrc
-      this.setAttribute('src', fallbackSrc) // Update the attribute to the fallback source
+      this.setAttribute('src', fallbackSrc)
       this.dispatchEvent(new CustomEvent('load-error', { detail: { fallbackSrc } }))
     }
   }
-}
 
-customElements.define('p2p-image', P2PImage)
+  clearAndAppend (element) {
+    this.innerHTML = ''
+    this.appendChild(element)
+  }
+}
 
 class P2PVideo extends HTMLElement {
   constructor () {
     super()
-    this.attachShadow({ mode: 'open' })
-
-    // Create a video element
     this.video = document.createElement('video')
     this.video.controls = true
-
-    // Load the CSS file
-    const style = document.createElement('style')
-    fetch('./p2p-media.css').then(response => response.text()).then(css => {
-      style.textContent = css
-      this.shadowRoot.append(style, this.video)
-    })
+    addStylesheet()
   }
 
   static get observedAttributes () {
@@ -95,41 +82,37 @@ class P2PVideo extends HTMLElement {
   }
 
   connectedCallback () {
-    if (this.hasAttribute('src')) {
-      this.loadVideo(this.getAttribute('src'))
-    }
-    this.syncClass()
-    this.addEventListener('load-error', e => {
-      console.log(`Handled fallback for src: ${e.detail.fallbackSrc}`)
-    })
+    this.attachVideo()
   }
 
   attributeChangedCallback (name, oldValue, newValue) {
     if (name === 'src' && newValue !== oldValue) {
-      this.loadVideo(newValue)
-      this.video.src = newValue // Ensure the inner video src is updated immediately
+      this.attachVideo(newValue)
     } else if (name === 'class' && newValue !== oldValue) {
       this.syncClass()
     }
   }
 
-  async loadVideo (src) {
+  async attachVideo (src) {
     this.video.innerHTML = '' // Clear any existing sources
     const source = document.createElement('source')
-    source.src = src
+    source.src = src || this.getAttribute('src')
 
     try {
-      const p2pSupported = await supportsP2P(src)
+      const p2pSupported = await supportsP2P(source.src)
       if (!p2pSupported) {
-        throw new Error('P2P not supported for this URL')
+        this.handleError(source)
+        return
       }
     } catch (error) {
       this.handleError(source)
-      return // Skip setting the source if not supported
+      return
     }
 
     source.onerror = () => this.handleError(source)
     this.video.appendChild(source)
+    this.syncClass()
+    this.clearAndAppend(this.video)
   }
 
   syncClass () {
@@ -141,12 +124,17 @@ class P2PVideo extends HTMLElement {
     const src = source.src
     if (isP2P(src)) {
       const fallbackSrc = resolveP2PUrl(src)
-      console.log(`Failed to load video source. Resolving to gateway URL: ${fallbackSrc}`)
       source.src = fallbackSrc
-      this.setAttribute('src', fallbackSrc) // Update the attribute to the fallback source
+      this.setAttribute('src', fallbackSrc)
       this.dispatchEvent(new CustomEvent('load-error', { detail: { fallbackSrc } }))
     }
   }
+
+  clearAndAppend (element) {
+    this.innerHTML = ''
+    this.appendChild(element)
+  }
 }
 
+customElements.define('p2p-image', P2PImage)
 customElements.define('p2p-video', P2PVideo)
