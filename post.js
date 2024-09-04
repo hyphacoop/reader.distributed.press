@@ -1,6 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
+import './p2p-media.js'
 import './post-replies.js'
 
 function formatDate (dateString) {
@@ -40,6 +41,32 @@ function timeSince (dateString) {
   return Math.floor(seconds) + 's'
 }
 
+function insertImagesAndVideos (content) {
+  const parser = new DOMParser()
+  const contentDOM = parser.parseFromString(content, 'text/html')
+
+  contentDOM.querySelectorAll('img').forEach(img => {
+    const originalSrc = img.getAttribute('src')
+    const p2pImg = document.createElement('p2p-image')
+    p2pImg.setAttribute('src', originalSrc)
+
+    // Append the image directly to the parent node
+    img.parentNode.replaceChild(p2pImg, img)
+  })
+
+  contentDOM.querySelectorAll('video').forEach(video => {
+    const originalSrc = video.getAttribute('src')
+    const p2pVideo = document.createElement('p2p-video')
+    p2pVideo.setAttribute('src', originalSrc)
+
+    // Append the video directly to the parent node
+    video.parentNode.replaceChild(p2pVideo, video)
+  })
+
+  // Return the modified content as a string
+  return contentDOM.body.innerHTML
+}
+
 // Define a class for the <distributed-post> web component
 class DistributedPost extends HTMLElement {
   static get observedAttributes () {
@@ -58,9 +85,11 @@ class DistributedPost extends HTMLElement {
 
     try {
       const content = await db.getNote(postUrl)
-
-      // Assuming JSON-LD content has a "summary" field
-      this.renderPostContent(content)
+      if (content && content.content) {
+        content.content = insertImagesAndVideos(content.content) // Resolve URLs before rendering
+        // Assuming JSON-LD content has a "summary" field
+        this.renderPostContent(content)
+      }
     } catch (error) {
       console.error(error)
       this.renderErrorContent(error.message)
@@ -115,11 +144,12 @@ class DistributedPost extends HTMLElement {
 
     // Determine content source based on structure of jsonLdData
     const contentSource = jsonLdData.content || (jsonLdData.object && jsonLdData.object.content)
-
-    // Sanitize content and create a DOM from it
     const sanitizedContent = DOMPurify.sanitize(contentSource)
     const parser = new DOMParser()
     const contentDOM = parser.parseFromString(sanitizedContent, 'text/html')
+
+    // Insert images and videos into the DOM
+    const processedContent = insertImagesAndVideos(contentSource)
 
     // Process all anchor elements to handle actor and posts mentions
     const anchors = contentDOM.querySelectorAll('a')
@@ -161,28 +191,24 @@ class DistributedPost extends HTMLElement {
       }
     })
 
-    // Determine if the content is marked as sensitive in either the direct jsonLdData or within jsonLdData.object
-    const isSensitive =
-      jsonLdData.sensitive ||
-      (jsonLdData.object && jsonLdData.object.sensitive)
+    const isSensitive = jsonLdData.sensitive || (jsonLdData.object && jsonLdData.object.sensitive)
+    const summary = jsonLdData.summary || (jsonLdData.object && jsonLdData.object.summary)
 
-    const summary =
-      jsonLdData.summary ||
-      (jsonLdData.object && jsonLdData.object.summary)
-
-    // Handle sensitive content
     if (isSensitive) {
+      // Handle sensitive content
       const details = document.createElement('details')
-      const summary = document.createElement('summary')
-      summary.classList.add('cw-summary')
-      summary.textContent = 'Sensitive Content (click to view)'
-      details.appendChild(summary)
-      const content = document.createElement('p')
-      content.innerHTML = DOMPurify.sanitize(contentSource)
-      details.appendChild(content)
+      const summaryElement = document.createElement('summary')
+      summaryElement.classList.add('cw-summary')
+      summaryElement.textContent = 'Sensitive Content (click to view)'
+      details.appendChild(summaryElement)
+
+      const contentElement = document.createElement('p')
+      contentElement.innerHTML = processedContent
+      details.appendChild(contentElement)
+
       postContent.appendChild(details)
     } else if (summary) {
-      // Non-sensitive content with a summary (post title)
+      // Handle content with summary
       const details = document.createElement('details')
       const summaryElement = document.createElement('summary')
       summaryElement.textContent = summary // Post title goes here
@@ -195,7 +221,7 @@ class DistributedPost extends HTMLElement {
       summaryElement.appendChild(toggleText)
 
       const contentElement = document.createElement('p')
-      contentElement.innerHTML = DOMPurify.sanitize(jsonLdData.content)
+      contentElement.innerHTML = processedContent
       details.appendChild(contentElement)
       postContent.appendChild(details)
 
@@ -204,9 +230,8 @@ class DistributedPost extends HTMLElement {
         toggleText.textContent = details.open ? 'Show less' : 'Show more'
       })
     } else {
-      const content = document.createElement('p')
-      content.innerHTML = contentDOM.body.innerHTML
-      postContent.appendChild(content)
+      // Regular content without summary or sensitivity
+      postContent.innerHTML = processedContent
     }
 
     // Append the content to the post container
@@ -362,12 +387,12 @@ class ActorInfo extends HTMLElement {
           }
         }
 
-        const img = document.createElement('img')
-        img.classList.add('actor-icon')
-        img.src = iconUrl
-        img.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
-        img.addEventListener('click', this.navigateToActorProfile.bind(this))
-        author.appendChild(img)
+        const p2pImage = document.createElement('p2p-image')
+        p2pImage.className = 'actor-icon'
+        p2pImage.setAttribute('src', iconUrl)
+        p2pImage.alt = actorInfo.name ? actorInfo.name : 'Actor icon'
+        p2pImage.addEventListener('click', this.navigateToActorProfile.bind(this))
+        author.appendChild(p2pImage)
 
         if (actorInfo.name) {
           const pName = document.createElement('div')
