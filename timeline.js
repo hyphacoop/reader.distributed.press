@@ -67,8 +67,6 @@ class ReaderTimeline extends HTMLElement {
       'ipns://distributed.press/about.ipns.jsonld',
       'hyper://hypha.coop/about.hyper.jsonld',
       'https://sutty.nl/about.jsonld'
-      // "https://akhilesh.sutty.nl/about.jsonld",
-      // "https://staticpub.mauve.moe/about.jsonld",
     ]
 
     const hasFollowedActors = await db.hasFollowedActors()
@@ -96,12 +94,31 @@ class ReaderTimeline extends HTMLElement {
 
     const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
 
+    // Log timeline filtering
+    console.log('Fetching timeline with filter:', { timeline: 'following' })
+
     // Fetch notes and render them as they become available
+    let notesFound = false
     for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
+      notesFound = true
+      console.log('Loading note:', note) // Log each note fetched
+
       // Exclude replies from appearing in the timeline
       if (!note.inReplyTo) {
         this.appendNoteElement(note)
         count++
+      }
+    }
+
+    // Fallback in case no notes are found for the "following" timeline
+    if (!notesFound) {
+      console.log('No notes found for timeline. Fallback to all notes.')
+      for await (const note of db.searchNotes({}, { skip: this.skip, limit: this.limit, sort: sortValue })) {
+        console.log('Loading fallback note:', note)
+        if (!note.inReplyTo) {
+          this.appendNoteElement(note)
+          count++
+        }
       }
     }
 
