@@ -212,40 +212,43 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-
-    // Log the received timeline
-    console.log('Searching notes with timeline:', timeline)
-
-    const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
-    console.log('Using index:', indexName)
-
+    const indexName = inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
     const index = tx.store.index(indexName)
     const direction = sort > 0 ? 'next' : 'prev'
-    let cursor
+    let cursor = await index.openCursor(null, direction)
 
-    if (timeline) {
-      cursor = await index.openCursor([timeline], direction)
-    } else if (inReplyTo) {
-      cursor = await index.openCursor(inReplyTo, direction)
-    } else if (attributedTo) {
-      cursor = await index.openCursor([attributedTo], direction)
+    if (sort === 0) { // Random sort
+      const totalNotes = await index.count()
+      for (let i = 0; i < limit; i++) {
+        const randomSkip = Math.floor(Math.random() * totalNotes)
+        cursor = await index.openCursor()
+        if (randomSkip > 0) {
+          await cursor.advance(randomSkip)
+        }
+        if (cursor) {
+          yield cursor.value
+        }
+      }
     } else {
-      cursor = await index.openCursor(null, direction)
-    }
+      if (attributedTo) {
+        cursor = await index.openCursor([attributedTo], direction)
+      } else if (inReplyTo) {
+        cursor = await index.openCursor(inReplyTo, direction)
+      } else {
+        cursor = await index.openCursor(null, direction)
+      }
 
-    if (cursor && skip) {
-      await cursor.advance(skip) // Only advance if cursor is not null
-    }
+      if (skip) await cursor.advance(skip)
 
-    let count = 0
-    while (cursor) {
-      if (count >= limit) break // Stop after reaching the limit
-      console.log('Yielding note:', cursor.value) // Log each note fetched
-      yield cursor.value
-      cursor = await cursor.continue()
-      count++
+      let count = 0
+      while (cursor) {
+        if (count >= limit) break
+        count++
+        yield cursor.value
+        cursor = await cursor.continue()
+      }
     }
 
     await tx.done

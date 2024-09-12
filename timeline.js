@@ -76,15 +76,19 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline () {
-    this.loadMore() // Start loading notes immediately
-
     if (!hasLoaded) {
       hasLoaded = true
+
       const followedActors = await db.getFollowedActors()
-      // Ingest actors in the background without waiting for them
-      Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
-        .then(() => console.log('All followed actors have been ingested'))
-        .catch(error => console.error('Error ingesting followed actors:', error))
+
+      // Ensure all followed actors are ingested before loading notes.
+      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+      console.log('All followed actors have been ingested')
+
+      // Load the timeline notes after ingestion.
+      this.resetTimeline()
+    } else {
+      this.loadMore() // Start loading notes immediately if already loaded.
     }
   }
 
@@ -122,17 +126,21 @@ class ReaderTimeline extends HTMLElement {
       }
     }
 
-    this.updateHasMore(count)
+    this.updateHasMore(count, sortValue) // Pass sort value for correct handling of pagination
     this.appendLoadMoreIfNeeded()
   }
 
-  updateHasMore (count) {
+  updateHasMore (count, sortValue) {
     if (this.sort === 'random') {
       this.loadedNotesCount += count
       this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
     } else {
       this.skip += count
-      this.hasMoreItems = count === this.limit
+      if (sortValue === 1) { // Oldest sort
+        this.hasMoreItems = count > 0 // If we received any notes, assume there are more to load
+      } else {
+        this.hasMoreItems = count === this.limit // Default behavior for "newest"
+      }
     }
   }
 
