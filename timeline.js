@@ -64,7 +64,7 @@ class ReaderTimeline extends HTMLElement {
   async initializeDefaultFollowedActors () {
     const defaultActors = [
       'https://social.distributed.press/v1/@announcements@social.distributed.press/',
-      'ipns://distributed.press/about.ipns.jsonld',
+      'https://distributed.press/about.jsonld',
       'hyper://hypha.coop/about.hyper.jsonld',
       'https://sutty.nl/about.jsonld'
     ]
@@ -98,14 +98,11 @@ class ReaderTimeline extends HTMLElement {
 
     const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
 
-    // Log timeline filtering
-    console.log('Fetching timeline with filter:', { timeline: 'following' })
-
     // Fetch notes and render them as they become available
     let notesFound = false
     for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
       notesFound = true
-      console.log('Loading note:', note) // Log each note fetched
+      console.log('Loading note:', note)
 
       // Exclude replies from appearing in the timeline
       if (!note.inReplyTo) {
@@ -114,32 +111,23 @@ class ReaderTimeline extends HTMLElement {
       }
     }
 
-    // Fallback in case no notes are found for the "following" timeline
-    if (!notesFound) {
-      console.log('No notes found for timeline. Fallback to all notes.')
-      for await (const note of db.searchNotes({}, { skip: this.skip, limit: this.limit, sort: sortValue })) {
-        console.log('Loading fallback note:', note)
-        if (!note.inReplyTo) {
-          this.appendNoteElement(note)
-          count++
-        }
-      }
-    }
-
-    this.updateHasMore(count, sortValue) // Pass sort value for correct handling of pagination
-    this.appendLoadMoreIfNeeded()
+    this.updateHasMore(count, sortValue)
+    this.appendLoadMoreIfNeeded() // Ensure this is called even if no notes are found
   }
 
   updateHasMore (count, sortValue) {
+    this.skip += count
+
     if (this.sort === 'random') {
+      // For random, we need to compare against the total number of notes
       this.loadedNotesCount += count
       this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
     } else {
-      this.skip += count
-      if (sortValue === 1) { // Oldest sort
-        this.hasMoreItems = count > 0 // If we received any notes, assume there are more to load
-      } else {
-        this.hasMoreItems = count === this.limit // Default behavior for "newest"
+      // In the "newest" timeline, check if we have exactly `this.limit` notes
+      if (sortValue === -1) { // Newest first
+        this.hasMoreItems = count === this.limit
+      } else if (sortValue === 1) { // Oldest first
+        this.hasMoreItems = count > 0 // As long as we're receiving notes, assume there are more
       }
     }
   }

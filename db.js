@@ -93,7 +93,7 @@ export class ActivityPubDB extends EventTarget {
   }
 
   static async load (name = DEFAULT_DB, fetch = globalThis.fetch) {
-    const db = await openDB(name, 3, {
+    const db = await openDB(name, 4, {
       upgrade
     })
 
@@ -253,46 +253,40 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ timeline, attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
-    console.log('Using index:', indexName)
-    const index = tx.store.index(indexName)
-    const direction = sort > 0 ? 'next' : 'prev'
+    let indexName, keyRange
 
-    if (sort === 0) { // Random sort
-      const totalNotes = await index.count()
-      for (let i = 0; i < limit; i++) {
-        const randomSkip = Math.floor(Math.random() * totalNotes)
-        const cursor = await index.openCursor(null, 'next')
-        if (randomSkip > 0) {
-          await cursor.advance(randomSkip)
-        }
-        if (cursor) {
-          yield cursor.value
-        }
-      }
+    if (inReplyTo) {
+      indexName = IN_REPLY_TO_FIELD
+      keyRange = IDBKeyRange.only(inReplyTo)
+    } else if (timeline) {
+      indexName = 'timeline'
+      keyRange = IDBKeyRange.only(timeline)
+    } else if (attributedTo) {
+      indexName = ATTRIBUTED_TO_FIELD
+      keyRange = IDBKeyRange.only(attributedTo)
     } else {
-      let cursor
-      if (timeline) {
-        cursor = await index.openCursor([timeline], direction)
-      } else if (attributedTo) {
-        cursor = await index.openCursor([attributedTo], direction)
-      } else if (inReplyTo) {
-        cursor = await index.openCursor(inReplyTo, direction)
-      } else {
-        cursor = await index.openCursor(null, direction)
-      }
+      indexName = PUBLISHED_FIELD
+      keyRange = null
+    }
 
-      if (skip) await cursor.advance(skip)
+    const index = tx.store.index(indexName)
+    let cursor = await index.openCursor(keyRange)
 
-      let count = 0
-      while (cursor) {
-        if (count >= limit) break
-        yield cursor.value
-        cursor = await cursor.continue()
-        count++
-      }
+    const notes = []
+    while (cursor) {
+      notes.push(cursor.value)
+      cursor = await cursor.continue()
+    }
+
+    // Now sort notes by 'published' field
+    notes.sort((a, b) => (sort > 0 ? 1 : -1) * (a.published - b.published))
+
+    // Apply skip and limit
+    const selectedNotes = notes.slice(skip, skip + limit)
+    for (const note of selectedNotes) {
+      yield note
     }
 
     await tx.done
@@ -461,11 +455,17 @@ export class ActivityPubDB extends EventTarget {
 
     note.published = new Date(note.published) // Convert published to Date
     note.tag_names = (note.tags || []).map(({ name }) => name) // Extract tag names
-    note.timeline = [TIMELINE_ALL]
 
     const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
+    note.timeline = []
+
     if (isFollowingAuthor) {
-      note.timeline.push(TIMELINE_FOLLOWING)
+      note.timeline.push('all')
+
+      // Only add to the 'following' timeline if it's not a reply
+      if (!note.inReplyTo) {
+        note.timeline.push('following')
+      }
     }
 
     const existingNote = await this.db.get(NOTES_STORE, note.id)
@@ -667,7 +667,7 @@ async function upgrade (db, oldVersion, newVersion, transaction) {
 
   if (oldVersion < 3) {
     const notes = transaction.objectStore(NOTES_STORE)
-    notes.createIndex('timeline, published', ['timeline', PUBLISHED_FIELD], { unique: false })
+    notes.createIndex('timeline', 'timeline', { unique: false, multiEntry: true })
   }
 
   function addRegularIndex (store, field, options = {}) {
