@@ -64,11 +64,9 @@ class ReaderTimeline extends HTMLElement {
   async initializeDefaultFollowedActors () {
     const defaultActors = [
       'https://social.distributed.press/v1/@announcements@social.distributed.press/',
-      'ipns://distributed.press/about.ipns.jsonld',
+      'https://distributed.press/about.jsonld',
       'hyper://hypha.coop/about.hyper.jsonld',
       'https://sutty.nl/about.jsonld'
-      // "https://akhilesh.sutty.nl/about.jsonld",
-      // "https://staticpub.mauve.moe/about.jsonld",
     ]
 
     const hasFollowedActors = await db.hasFollowedActors()
@@ -78,15 +76,19 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async initTimeline () {
-    this.loadMore() // Start loading notes immediately
-
     if (!hasLoaded) {
       hasLoaded = true
+
       const followedActors = await db.getFollowedActors()
-      // Ingest actors in the background without waiting for them
-      Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
-        .then(() => console.log('All followed actors have been ingested'))
-        .catch(error => console.error('Error ingesting followed actors:', error))
+
+      // Ensure all followed actors are ingested before loading notes.
+      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
+      console.log('All followed actors have been ingested')
+
+      // Load the timeline notes after ingestion.
+      this.resetTimeline()
+    } else {
+      this.loadMore() // Start loading notes immediately if already loaded.
     }
   }
 
@@ -97,22 +99,36 @@ class ReaderTimeline extends HTMLElement {
     const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
 
     // Fetch notes and render them as they become available
+    let notesFound = false
     for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
-      this.appendNoteElement(note)
-      count++
+      notesFound = true
+      console.log('Loading note:', note)
+
+      // Exclude replies from appearing in the timeline
+      if (!note.inReplyTo) {
+        this.appendNoteElement(note)
+        count++
+      }
     }
 
-    this.updateHasMore(count)
-    this.appendLoadMoreIfNeeded()
+    this.updateHasMore(count, sortValue)
+    this.appendLoadMoreIfNeeded() // Ensure this is called even if no notes are found
   }
 
-  updateHasMore (count) {
+  updateHasMore (count, sortValue) {
+    this.skip += count
+
     if (this.sort === 'random') {
+      // For random, we need to compare against the total number of notes
       this.loadedNotesCount += count
       this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
     } else {
-      this.skip += count
-      this.hasMoreItems = count === this.limit
+      // In the "newest" timeline, check if we have exactly `this.limit` notes
+      if (sortValue === -1) { // Newest first
+        this.hasMoreItems = count === this.limit
+      } else if (sortValue === 1) { // Oldest first
+        this.hasMoreItems = count > 0 // As long as we're receiving notes, assume there are more
+      }
     }
   }
 
