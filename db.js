@@ -34,6 +34,12 @@ export const IPNS_PREFIX = 'ipns://'
 const ACCEPT_HEADER =
 'application/activity+json, application/ld+json, application/json, text/html'
 
+const TIMELINE_ALL = 'all'
+const TIMELINE_FOLLOWING = 'following'
+
+// Global cache to store protocol reachability
+const protocolSupportMap = new Map()
+
 // TODO: When ingesting notes and actors, wrap any dates in `new Date()`
 // TODO: When ingesting notes add a "tag_names" field which is just the names of the tag
 // TODO: When ingesting notes, also load their replies
@@ -42,8 +48,42 @@ export function isP2P (url) {
   return url.startsWith(HYPER_PREFIX) || url.startsWith(IPNS_PREFIX)
 }
 
-const TIMELINE_ALL = 'all'
-const TIMELINE_FOLLOWING = 'following'
+export async function supportsP2P (url) {
+  const urlObject = new URL(url)
+  const protocol = urlObject.protocol
+
+  if (protocolSupportMap.has(protocol)) {
+    return protocolSupportMap.get(protocol)
+  }
+
+  // Set a promise to avoid multiple simultaneous checks
+  const supportCheckPromise = fetch(url)
+    .then(response => {
+      const supported = response.ok
+      protocolSupportMap.set(protocol, supported)
+      return supported
+    })
+    .catch(error => {
+      console.error(`Error checking protocol support for ${protocol}:`, error)
+      protocolSupportMap.set(protocol, false)
+      return false
+    })
+
+  protocolSupportMap.set(protocol, supportCheckPromise)
+  return supportCheckPromise
+}
+
+export function resolveP2PUrl (url) {
+  if (!url) return url
+
+  if (url.startsWith(HYPER_PREFIX)) {
+    return url.replace(HYPER_PREFIX, 'https://hyper.hypha.coop/hyper/')
+  } else if (url.startsWith(IPNS_PREFIX)) {
+    return url.replace(IPNS_PREFIX, 'https://ipfs.hypha.coop/ipns/')
+  }
+
+  return url
+}
 
 export class ActivityPubDB extends EventTarget {
   constructor (db, fetch = globalThis.fetch) {
@@ -106,6 +146,7 @@ export class ActivityPubDB extends EventTarget {
     if (url && typeof url === 'object') {
       return url
     }
+
     let response
     // Try fetching directly for all URLs (including P2P URLs)
     // TODO: Signed fetch
@@ -212,18 +253,18 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ attributedTo, inReplyTo, timeline } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
-    const indexName = inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
+    const indexName = timeline ? 'timeline, published' : inReplyTo ? IN_REPLY_TO_FIELD : (attributedTo ? `${ATTRIBUTED_TO_FIELD}, published` : PUBLISHED_FIELD)
+    console.log('Using index:', indexName)
     const index = tx.store.index(indexName)
     const direction = sort > 0 ? 'next' : 'prev'
-    let cursor = await index.openCursor(null, direction)
 
     if (sort === 0) { // Random sort
       const totalNotes = await index.count()
       for (let i = 0; i < limit; i++) {
         const randomSkip = Math.floor(Math.random() * totalNotes)
-        cursor = await index.openCursor()
+        const cursor = await index.openCursor(null, 'next')
         if (randomSkip > 0) {
           await cursor.advance(randomSkip)
         }
@@ -232,7 +273,10 @@ export class ActivityPubDB extends EventTarget {
         }
       }
     } else {
-      if (attributedTo) {
+      let cursor
+      if (timeline) {
+        cursor = await index.openCursor([timeline], direction)
+      } else if (attributedTo) {
         cursor = await index.openCursor([attributedTo], direction)
       } else if (inReplyTo) {
         cursor = await index.openCursor(inReplyTo, direction)
@@ -245,9 +289,9 @@ export class ActivityPubDB extends EventTarget {
       let count = 0
       while (cursor) {
         if (count >= limit) break
-        count++
         yield cursor.value
         cursor = await cursor.continue()
+        count++
       }
     }
 
@@ -420,9 +464,7 @@ export class ActivityPubDB extends EventTarget {
     note.timeline = [TIMELINE_ALL]
 
     const isFollowingAuthor = await this.isActorFollowed(note.attributedTo)
-
-    // Only add to the 'following' timeline if it's not a reply
-    if (isFollowingAuthor && !note.inReplyTo) {
+    if (isFollowingAuthor) {
       note.timeline.push(TIMELINE_FOLLOWING)
     }
 
