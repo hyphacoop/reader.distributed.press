@@ -273,7 +273,9 @@ export class ActivityPubDB extends EventTarget {
     // For random sort
     if (sort === 0) {
       const totalNotes = await index.count()
-      for (let i = 0; i < limit; i++) {
+      let count = 0 // Add a count variable to keep track of successful yields
+
+      while (count < limit) { // Use while loop based on count to ensure we return the correct number of items
         const randomSkip = Math.floor(Math.random() * totalNotes)
         const cursor = await index.openCursor()
         if (!cursor) break // Avoid null cursor cases
@@ -288,6 +290,7 @@ export class ActivityPubDB extends EventTarget {
         // Apply filtering logic
         if ((!excludeReplies || !note.inReplyTo) && (!timeline || (note.timeline && note.timeline.includes(timeline)))) {
           yield note
+          count++ // Increment count only after a successful yield
         }
       }
     } else { // For regular sorting (newest/oldest)
