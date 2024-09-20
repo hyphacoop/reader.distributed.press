@@ -1,13 +1,17 @@
-// defaults.js
 import { db } from './dbInstance.js'
 import { defaultLightTheme } from './default-theme.js'
 
 export async function fetchDefaults () {
-  const response = await fetch('./config/defaults.json')
-  if (!response.ok) {
-    throw new Error('Failed to load defaults.')
+  try {
+    const response = await fetch('./config/defaults.json')
+    if (!response.ok) {
+      throw new Error('Failed to load defaults.')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching defaults:', error)
+    return {}
   }
-  return await response.json()
 }
 
 export async function applyDefaults () {
@@ -23,6 +27,13 @@ export async function applyDefaults () {
       }
     }
 
+    // Check if a theme is already set in the DB
+    const currentTheme = await db.getTheme()
+    if (currentTheme) {
+      // Theme is already set by the user; do not override
+      return
+    }
+
     // Determine if the custom theme differs from the default light theme
     const customTheme = defaults.theme || {}
     const isCustomDifferent = isThemeDifferent(customTheme, defaultLightTheme)
@@ -36,7 +47,7 @@ export async function applyDefaults () {
       applyTheme('light')
     }
   } catch (error) {
-    console.error('Error loading defaults: ', error)
+    console.error('Error applying defaults:', error)
   }
 }
 
