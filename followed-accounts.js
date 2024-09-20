@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import { applyDefaults } from './defaults.js'
 
 export class FollowedActorsList extends HTMLElement {
   constructor () {
@@ -6,7 +7,9 @@ export class FollowedActorsList extends HTMLElement {
     this.updateFollowedActors = this.updateFollowedActors.bind(this)
   }
 
-  connectedCallback () {
+  async connectedCallback () {
+    await applyDefaults()
+
     this.renderFollowedActors()
 
     db.addEventListener('actorFollowed', this.updateFollowedActors)

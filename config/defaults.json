@@ -1,0 +1,12 @@
+{
+  "communityName": "Akhi's Art",
+  "theme": {
+    "bgColor": "#ecfeff",
+    "postBgColor": "#cffafe",
+    "postDetailsColor": "#06b6d4",
+    "postLinkColor": "#0ea5e9"
+  },
+  "defaultFollowedActors": [
+    "https://mastodon.social/@akhileshthite"
+  ]
+}

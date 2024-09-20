@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import { applyDefaults, initializeDefaultFollowedActors } from './defaults.js'
 
 let hasLoaded = false
 
@@ -25,8 +26,10 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async connectedCallback () {
+    await applyDefaults()
     this.initializeSortOrder()
-    this.initializeDefaultFollowedActors().then(() => this.initTimeline())
+    await initializeDefaultFollowedActors()
+    await this.initTimeline()
   }
 
   initializeSortOrder () {
@@ -59,20 +62,6 @@ class ReaderTimeline extends HTMLElement {
       this.removeChild(this.firstChild)
     }
     this.loadMore()
-  }
-
-  async initializeDefaultFollowedActors () {
-    const defaultActors = [
-      'https://social.distributed.press/v1/@announcements@social.distributed.press/',
-      'ipns://distributed.press/about.ipns.jsonld',
-      'hyper://hypha.coop/about.hyper.jsonld',
-      'https://sutty.nl/about.jsonld'
-    ]
-
-    const hasFollowedActors = await db.hasFollowedActors()
-    if (!hasFollowedActors) {
-      await Promise.all(defaultActors.map(actorUrl => db.followActor(actorUrl)))
-    }
   }
 
   async initTimeline () {
