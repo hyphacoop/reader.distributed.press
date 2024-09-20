@@ -1,12 +1,15 @@
 {
-  "communityName": "Akhi's Art",
+  "communityName": "Social Reader",
   "theme": {
-    "bgColor": "#ecfeff",
-    "postBgColor": "#cffafe",
-    "postDetailsColor": "#06b6d4",
+    "bgColor": "#ffffff",
+    "postBgColor": "#ebf3f5",
+    "postDetailsColor": "#4d626a",
     "postLinkColor": "#0ea5e9"
   },
   "defaultFollowedActors": [
-    "https://mastodon.social/@akhileshthite"
+    "https://social.distributed.press/v1/@announcements@social.distributed.press/",
+    "ipns://distributed.press/about.ipns.jsonld",
+    "hyper://hypha.coop/about.hyper.jsonld",
+    "https://sutty.nl/about.jsonld"  
   ]
 }
