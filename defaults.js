@@ -1,4 +1,6 @@
+// defaults.js
 import { db } from './dbInstance.js'
+import { defaultLightTheme } from './default-theme.js'
 
 export async function fetchDefaults () {
   const response = await fetch('./config/defaults.json')
@@ -21,21 +23,68 @@ export async function applyDefaults () {
       }
     }
 
-    // Apply theme if available
-    if (defaults.theme) {
-      applyTheme(defaults.theme)
+    // Determine if the custom theme differs from the default light theme
+    const customTheme = defaults.theme || {}
+    const isCustomDifferent = isThemeDifferent(customTheme, defaultLightTheme)
+
+    // Apply custom theme if available and different
+    if (isCustomDifferent) {
+      await db.setTheme('custom') // Set the theme to custom if not already set
+      applyCustomTheme(customTheme)
+    } else {
+      await db.setTheme('light') // Ensure the theme is set to light
+      applyTheme('light')
     }
   } catch (error) {
     console.error('Error loading defaults: ', error)
   }
 }
 
-function applyTheme (theme) {
+function isThemeDifferent (custom, defaultTheme) {
+  // Compare each property; return true if any property differs
+  for (const key in defaultTheme) {
+    if (custom[key] !== defaultTheme[key]) {
+      return true
+    }
+  }
+  // Additionally, check if custom has extra properties
+  for (const key in custom) {
+    if (!(key in defaultTheme)) {
+      return true
+    }
+  }
+  return false
+}
+
+function applyTheme (themeName) {
   const root = document.documentElement
-  if (theme.bgColor) root.style.setProperty('--bg-color', theme.bgColor)
-  if (theme.postBgColor) root.style.setProperty('--rdp-bg-color', theme.postBgColor)
-  if (theme.postDetailsColor) root.style.setProperty('--rdp-details-color', theme.postDetailsColor)
-  if (theme.postLinkColor) root.style.setProperty('--rdp-link-color', theme.postLinkColor)
+  root.setAttribute('data-theme', themeName)
+}
+
+async function applyCustomTheme (theme) {
+  const root = document.documentElement
+  root.setAttribute('data-theme', 'custom')
+
+  // Create or update a <style id="custom-theme"> element
+  let styleEl = document.getElementById('custom-theme')
+  if (!styleEl) {
+    styleEl = document.createElement('style')
+    styleEl.id = 'custom-theme'
+    document.head.appendChild(styleEl)
+  }
+
+  const themeVars = []
+
+  if (theme.bgColor) themeVars.push(`  --bg-color: ${theme.bgColor};`)
+  if (theme.postBgColor) themeVars.push(`  --rdp-bg-color: ${theme.postBgColor};`)
+  if (theme.postDetailsColor) themeVars.push(`  --rdp-details-color: ${theme.postDetailsColor};`)
+  if (theme.postLinkColor) themeVars.push(`  --rdp-link-color: ${theme.postLinkColor};`)
+
+  styleEl.textContent = `
+:root[data-theme="custom"] {
+${themeVars.join('\n')}
+}
+  `
 }
 
 export async function initializeDefaultFollowedActors () {

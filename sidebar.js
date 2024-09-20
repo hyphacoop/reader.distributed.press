@@ -1,4 +1,5 @@
 import './search.js'
+import { applyDefaults } from './defaults.js'
 
 const response = await fetch('./sidebar.html')
 const text = await response.text()
@@ -13,6 +14,10 @@ class SidebarNav extends HTMLElement {
   constructor () {
     super()
     this.init()
+  }
+
+  async connectedCallback () {
+    await applyDefaults()
   }
 
   init () {
