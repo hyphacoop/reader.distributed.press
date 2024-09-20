@@ -30,6 +30,7 @@ You can easily deploy a customized version of the reader by [forking](https://gi
     "https://mastodon.social/@akhileshthite"
   ]
 }
+```
 
 ![Akhi's Art Club on Social Reader](./custom-demo.png)
 
