@@ -11,9 +11,12 @@ class ReaderTimeline extends HTMLElement {
   totalNotesCount = 0
   loadedNotesCount = 0
   loadMoreBtn = null
+  loadingText = null
 
   constructor () {
     super()
+
+    // Create the Load More button
     this.loadMoreBtn = document.createElement('button')
     this.loadMoreBtn.textContent = 'Load More...'
     this.loadMoreBtn.className = 'load-more-btn'
@@ -23,9 +26,17 @@ class ReaderTimeline extends HTMLElement {
     this.loadMoreBtnWrapper.appendChild(this.loadMoreBtn)
 
     this.loadMoreBtn.addEventListener('click', () => this.loadMore())
+
+    // Create the loading text element
+    this.loadingText = document.createElement('div')
+    this.loadingText.textContent = 'Loading...'
+    this.loadingText.className = 'loading-text'
   }
 
   async connectedCallback () {
+    // Show the loading text when initializing
+    this.appendChild(this.loadingText)
+
     await applyDefaults()
     this.initializeSortOrder()
     await initializeDefaultFollowedActors()
@@ -61,7 +72,8 @@ class ReaderTimeline extends HTMLElement {
     while (this.firstChild) {
       this.removeChild(this.firstChild)
     }
-    this.loadMore()
+    this.appendChild(this.loadingText) // Show loading text when resetting timeline
+    await this.loadMore()
   }
 
   async initTimeline () {
@@ -98,6 +110,10 @@ class ReaderTimeline extends HTMLElement {
         this.appendNoteElement(note)
         count++
       }
+    }
+
+    if (notesFound) {
+      this.removeChild(this.loadingText) // Remove loading text when notes are found
     }
 
     this.updateHasMore(count, sortValue)
