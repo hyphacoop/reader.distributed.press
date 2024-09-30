@@ -4,6 +4,9 @@ import { applyDefaults } from './defaults.js'
 // GitHub API URL for fetching the latest release
 const githubApiUrl = 'https://api.github.com/repos/hyphacoop/reader.distributed.press/releases/latest'
 
+// GitHub Releases Page URL
+const githubReleasesPage = 'https://github.com/hyphacoop/reader.distributed.press/releases'
+
 async function fetchReleaseVersion () {
   try {
     const response = await fetch(githubApiUrl)
@@ -40,7 +43,17 @@ class SidebarNav extends HTMLElement {
     const versionElement = this.querySelector('#release-version')
     if (versionElement) {
       const releaseVersion = await fetchReleaseVersion()
-      versionElement.textContent = `${releaseVersion}`
+
+      // Create the anchor element
+      const versionLink = document.createElement('a')
+      versionLink.href = githubReleasesPage
+      versionLink.textContent = `${releaseVersion}`
+      versionLink.target = '_blank' // Open in a new tab
+      versionLink.rel = 'noopener noreferrer' // Security best practices
+
+      // Clear any existing content and append the link
+      versionElement.innerHTML = ''
+      versionElement.appendChild(versionLink)
     }
   }
 

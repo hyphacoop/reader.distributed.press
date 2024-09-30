@@ -50,11 +50,20 @@ sidebar-nav nav a:hover {
   text-decoration: none;
 }
 
+
 .release-version {
   font-size: 0.75rem;
-  color: #777;
+  color: var(--rdp-details-color);
   margin-top: 6px;
   text-align: center;
+}
+
+.release-version a {
+  color: var(--rdp-details-color);
+  text-decoration: none;
+}
+.release-version a:hover {
+  text-decoration: underline;
 }
 
 @media screen and (max-width: 1280px) {

@@ -7,9 +7,6 @@
     "postLinkColor": "#0ea5e9"
   },
   "defaultFollowedActors": [
-    "https://social.distributed.press/v1/@announcements@social.distributed.press/",
-    "ipns://distributed.press/about.ipns.jsonld",
-    "hyper://hypha.coop/about.hyper.jsonld",
-    "https://sutty.nl/about.jsonld"
+    "https://mastodon.mauve.moe/@mauve"
   ]
 }
