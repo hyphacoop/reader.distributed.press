@@ -253,16 +253,13 @@ export class ActivityPubDB extends EventTarget {
     await tx.done()
   }
 
-  async * searchNotes ({ timeline, attributedTo, inReplyTo } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
+  async * searchNotes ({ timeline, attributedTo, inReplyTo, excludeReplies } = {}, { skip = 0, limit = DEFAULT_LIMIT, sort = -1 } = {}) {
     const tx = this.db.transaction(NOTES_STORE, 'readonly')
     let indexName, keyRange
 
     if (inReplyTo) {
       indexName = IN_REPLY_TO_FIELD
       keyRange = IDBKeyRange.only(inReplyTo)
-    } else if (timeline) {
-      indexName = 'timeline'
-      keyRange = IDBKeyRange.only(timeline)
     } else if (attributedTo) {
       indexName = ATTRIBUTED_TO_FIELD
       keyRange = IDBKeyRange.only(attributedTo)
@@ -272,23 +269,68 @@ export class ActivityPubDB extends EventTarget {
     }
 
     const index = tx.store.index(indexName)
-    let cursor = await index.openCursor(keyRange)
 
-    const notes = []
-    while (cursor) {
-      notes.push(cursor.value)
-      cursor = await cursor.continue()
+    // For random sort
+    if (sort === 0) {
+      const totalNotes = await index.count()
+      let count = 0 // Add a count variable to keep track of successful yields
+
+      while (count < limit) { // Use while loop based on count to ensure we return the correct number of items
+        const randomSkip = Math.floor(Math.random() * totalNotes)
+        const cursor = await index.openCursor()
+        if (!cursor) break // Avoid null cursor cases
+
+        // Advance the cursor by randomSkip
+        if (randomSkip > 0) {
+          await cursor.advance(randomSkip)
+        }
+
+        const note = cursor.value
+
+        // Apply filtering logic
+        if ((!excludeReplies || !note.inReplyTo) && (!timeline || (note.timeline && note.timeline.includes(timeline)))) {
+          yield note
+          count++ // Increment count only after a successful yield
+        }
+      }
+    } else { // For regular sorting (newest/oldest)
+      const direction = sort > 0 ? 'next' : 'prev'
+      let cursor = await index.openCursor(keyRange, direction)
+
+      let skipped = 0
+      let count = 0
+
+      // Process cursor in a loop to keep the transaction active
+      while (cursor && count < limit) {
+        const note = cursor.value
+
+        let includeNote = true
+
+        // Filter by timeline
+        if (timeline && (!note.timeline || !note.timeline.includes(timeline))) {
+          includeNote = false
+        }
+        // Exclude replies if required
+        if (excludeReplies && note.inReplyTo) {
+          includeNote = false
+        }
+
+        // If the note matches the filter criteria, yield it
+        if (includeNote) {
+          if (skipped < skip) {
+            skipped++
+          } else {
+            yield note
+            count++
+          }
+        }
+
+        // Move to the next cursor
+        cursor = await cursor.continue()
+      }
     }
 
-    // Now sort notes by 'published' field
-    notes.sort((a, b) => (sort > 0 ? 1 : -1) * (a.published - b.published))
-
-    // Apply skip and limit
-    const selectedNotes = notes.slice(skip, skip + limit)
-    for (const note of selectedNotes) {
-      yield note
-    }
-
+    // Ensure the transaction completes
     await tx.done
   }
 
@@ -300,12 +342,22 @@ export class ActivityPubDB extends EventTarget {
     // Add 'following' to timeline if the actor is followed
     const isFollowing = await this.isActorFollowed(url)
     if (isFollowing) {
-      for await (const note of this.searchNotes({ attributedTo: actor.id })) {
+      const tx = this.db.transaction(NOTES_STORE, 'readwrite')
+      const store = tx.objectStore(NOTES_STORE)
+      const index = store.index(ATTRIBUTED_TO_FIELD)
+      const keyRange = IDBKeyRange.only(actor.id)
+      let cursor = await index.openCursor(keyRange)
+
+      while (cursor) {
+        const note = cursor.value
         if (!note.timeline.includes(TIMELINE_FOLLOWING)) {
           note.timeline.push(TIMELINE_FOLLOWING)
-          await this.db.put(NOTES_STORE, note)
+          cursor.update(note)
         }
+        cursor = await cursor.continue()
       }
+
+      await tx.done
     }
 
     // If actor has an 'outbox', ingest it as a collection
@@ -314,9 +366,6 @@ export class ActivityPubDB extends EventTarget {
     } else {
       console.error(`No outbox found for actor at URL ${url}`)
     }
-
-    // This is where we might add more features to our actor ingestion process.
-    // e.g., if (actor.followers) { ... }
   }
 
   async ingestActivityCollection (collectionOrUrl, actorId, isInitial = false) {

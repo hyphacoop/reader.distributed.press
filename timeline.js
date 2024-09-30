@@ -26,7 +26,8 @@ class ReaderTimeline extends HTMLElement {
 
   async connectedCallback () {
     this.initializeSortOrder()
-    this.initializeDefaultFollowedActors().then(() => this.initTimeline())
+    await this.initializeDefaultFollowedActors()
+    await this.initTimeline()
   }
 
   initializeSortOrder () {
@@ -58,7 +59,7 @@ class ReaderTimeline extends HTMLElement {
     while (this.firstChild) {
       this.removeChild(this.firstChild)
     }
-    this.loadMore()
+    await this.loadMore()
   }
 
   async initializeDefaultFollowedActors () {
@@ -78,17 +79,10 @@ class ReaderTimeline extends HTMLElement {
   async initTimeline () {
     if (!hasLoaded) {
       hasLoaded = true
-
-      const followedActors = await db.getFollowedActors()
-
-      // Ensure all followed actors are ingested before loading notes.
-      await Promise.all(followedActors.map(({ url }) => db.ingestActor(url)))
-      console.log('All followed actors have been ingested')
-
-      // Load the timeline notes after ingestion.
-      this.resetTimeline()
+      // No need to re-ingest actors; they've been ingested in initializeDefaultFollowedActors()
+      await this.resetTimeline()
     } else {
-      this.loadMore() // Start loading notes immediately if already loaded.
+      await this.loadMore()
     }
   }
 
@@ -99,20 +93,14 @@ class ReaderTimeline extends HTMLElement {
     const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
 
     // Fetch notes and render them as they become available
-    let notesFound = false
-    for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
-      notesFound = true
+    for await (const note of db.searchNotes({ timeline: 'following', excludeReplies: true }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
       console.log('Loading note:', note)
-
-      // Exclude replies from appearing in the timeline
-      if (!note.inReplyTo) {
-        this.appendNoteElement(note)
-        count++
-      }
+      this.appendNoteElement(note)
+      count++
     }
 
     this.updateHasMore(count, sortValue)
-    this.appendLoadMoreIfNeeded() // Ensure this is called even if no notes are found
+    this.appendLoadMoreIfNeeded()
   }
 
   updateHasMore (count, sortValue) {
