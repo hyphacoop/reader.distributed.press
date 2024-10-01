@@ -19,7 +19,7 @@ You can easily deploy a customized version of the reader by [forking](https://gi
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.2.0",
   "communityName": "Akhi's Art Club",
   "theme": {
     "bgColor": "#ecfeff",
