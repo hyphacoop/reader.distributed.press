@@ -1,8 +1,8 @@
 import './search.js'
 import { applyDefaults } from './defaults.js'
 
-// The version will now be fetched from the default.json file
-const defaultJsonUrl = './config/defaults.json'
+// Use import.meta.url to create a URL relative to the module's location
+const defaultJsonUrl = new URL('./config/defaults.json', import.meta.url).href
 
 // GitHub Releases Page URL
 const githubReleasesPage = 'https://github.com/hyphacoop/reader.distributed.press/releases'
@@ -21,7 +21,7 @@ async function fetchLocalVersion () {
   }
 }
 
-const response = await fetch('./sidebar.html')
+const response = await fetch(new URL('./sidebar.html', import.meta.url).href)
 const text = await response.text()
 const template = document.createElement('template')
 template.innerHTML = text
