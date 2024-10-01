@@ -1,6 +1,7 @@
 /* global customElements, HTMLElement */
 import DOMPurify from './dependencies/dompurify/purify.js'
 import { db } from './dbInstance.js'
+import { applyDefaults } from './defaults.js'
 import './p2p-media.js'
 import './post-replies.js'
 
@@ -73,7 +74,9 @@ class DistributedPost extends HTMLElement {
     return ['url']
   }
 
-  connectedCallback () {
+  async connectedCallback () {
+    await applyDefaults()
+
     this.loadAndRenderPost(this.getAttribute('url'))
   }
 

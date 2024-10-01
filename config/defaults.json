@@ -1,0 +1,16 @@
+{
+  "version": "1.2.0",
+  "communityName": "Social Reader",
+  "theme": {
+    "bgColor": "#ffffff",
+    "postBgColor": "#ebf3f5",
+    "postDetailsColor": "#4d626a",
+    "postLinkColor": "#0ea5e9"
+  },
+  "defaultFollowedActors": [
+    "https://social.distributed.press/v1/@announcements@social.distributed.press/",
+    "ipns://distributed.press/about.ipns.jsonld",
+    "hyper://hypha.coop/about.hyper.jsonld",
+    "https://sutty.nl/about.jsonld"
+  ]
+}

@@ -1,57 +1,75 @@
+// theme-selector.js
 import { db } from './dbInstance.js'
+import { fetchDefaults } from './defaults.js'
+import { defaultLightTheme } from './default-theme.js' // Import the default light theme
 
 class ThemeSelector extends HTMLElement {
   constructor () {
     super()
     this.attachShadow({ mode: 'open' })
-    this.shadowRoot.appendChild(this.buildTemplate())
-    this.shadowRoot.querySelector('#theme-select').addEventListener('change', this.changeTheme.bind(this))
+    this.selectElement = document.createElement('select')
+    this.selectElement.id = 'theme-select'
+    this.selectElement.addEventListener('change', this.changeTheme.bind(this))
+
+    const style = document.createElement('style')
+    style.textContent = `
+      select {
+        padding: 2px;
+        margin: 6px 0;
+        border: 1px solid var(--rdp-border-color);
+        border-radius: 4px;
+        width: 120px;
+      }
+    `
+
+    this.shadowRoot.appendChild(this.selectElement)
+    this.shadowRoot.appendChild(style)
   }
 
   async connectedCallback () {
     // Append colorblind filters to the main document
     document.body.appendChild(this.createColorBlindFilters())
-    const currentTheme = await db.getTheme()
-    this.shadowRoot.querySelector('#theme-select').value = currentTheme || 'light'
-    this.applyTheme(currentTheme || 'light')
-  }
 
-  appendColorBlindFiltersToBody () {
-    const existingSvg = document.querySelector('#colorblind-filters')
-    if (!existingSvg) {
-      document.body.appendChild(createColorBlindFilters())
+    const defaults = await fetchDefaults()
+    const customTheme = defaults.theme || {}
+    const isCustomDifferent = this.isThemeDifferent(customTheme, defaultLightTheme)
+
+    // Build the select options based on theme comparison
+    this.buildOptions(isCustomDifferent)
+
+    // Get the current theme from the database
+    const currentTheme = await db.getTheme() || (isCustomDifferent ? 'custom' : 'light')
+    this.selectElement.value = currentTheme
+
+    // Apply the current theme
+    if (currentTheme === 'custom' && isCustomDifferent) {
+      this.applyCustomTheme(customTheme)
+    } else {
+      this.applyTheme(currentTheme)
     }
   }
 
-  changeTheme (event) {
-    const newTheme = event.target.value
-    db.setTheme(newTheme)
-    this.applyTheme(newTheme)
+  isThemeDifferent (custom, defaultTheme) {
+    // Compare each property; return true if any property differs
+    for (const key in defaultTheme) {
+      if (custom[key] !== defaultTheme[key]) {
+        return true
+      }
+    }
+    // Additionally, check if custom has extra properties
+    for (const key in custom) {
+      if (!(key in defaultTheme)) {
+        return true
+      }
+    }
+    return false
   }
 
-  applyTheme (themeName) {
-    document.documentElement.setAttribute('data-theme', themeName)
-  }
+  buildOptions (includeCustom) {
+    // Clear existing options
+    this.selectElement.innerHTML = ''
 
-  buildTemplate () {
-    const template = document.createElement('template')
-
-    const style = document.createElement('style')
-    style.textContent = `
-          select {
-              padding: 2px;
-              margin: 6px 0;
-              border: 1px solid var(--rdp-border-color);
-              border-radius: 4px;
-              width: 60px;
-          }
-      `
-
-    // Create the select element
-    const select = document.createElement('select')
-    select.id = 'theme-select'
-
-    // Create and append the standard theme options
+    // Standard Themes
     const standardGroup = document.createElement('optgroup')
     standardGroup.label = 'Standard Themes';
     ['light', 'dark'].forEach(text => {
@@ -60,9 +78,18 @@ class ThemeSelector extends HTMLElement {
       option.textContent = text.charAt(0).toUpperCase() + text.slice(1)
       standardGroup.appendChild(option)
     })
-    select.appendChild(standardGroup)
 
-    // Create and append the colorblind theme options within an optgroup
+    // Conditionally add 'Custom' option
+    if (includeCustom) {
+      const customOption = document.createElement('option')
+      customOption.value = 'custom'
+      customOption.textContent = 'Custom'
+      standardGroup.appendChild(customOption)
+    }
+
+    this.selectElement.appendChild(standardGroup)
+
+    // Color Blind Themes
     const colorBlindGroup = document.createElement('optgroup')
     colorBlindGroup.label = 'Color Blind Themes';
     [
@@ -80,13 +107,59 @@ class ThemeSelector extends HTMLElement {
       colorBlindGroup.appendChild(option)
     })
 
-    select.appendChild(colorBlindGroup)
+    this.selectElement.appendChild(colorBlindGroup)
+  }
 
-    // Append the select & style to the template's content
-    template.content.appendChild(select)
-    template.content.appendChild(style)
+  async changeTheme (event) {
+    const newTheme = event.target.value
+    await db.setTheme(newTheme)
 
-    return template.content
+    const defaults = await fetchDefaults()
+    const customTheme = defaults.theme || {}
+    const isCustomDifferent = this.isThemeDifferent(customTheme, defaultLightTheme)
+
+    if (newTheme === 'custom' && isCustomDifferent) {
+      this.applyCustomTheme(customTheme)
+    } else {
+      this.removeCustomTheme()
+      this.applyTheme(newTheme)
+    }
+  }
+
+  applyTheme (themeName) {
+    document.documentElement.setAttribute('data-theme', themeName)
+  }
+
+  async applyCustomTheme (theme) {
+    document.documentElement.setAttribute('data-theme', 'custom')
+
+    // Create or update a <style id="custom-theme"> element
+    let styleEl = document.getElementById('custom-theme')
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = 'custom-theme'
+      document.head.appendChild(styleEl)
+    }
+
+    const themeVars = []
+
+    if (theme.bgColor) themeVars.push(`  --bg-color: ${theme.bgColor};`)
+    if (theme.postBgColor) themeVars.push(`  --rdp-bg-color: ${theme.postBgColor};`)
+    if (theme.postDetailsColor) themeVars.push(`  --rdp-details-color: ${theme.postDetailsColor};`)
+    if (theme.postLinkColor) themeVars.push(`  --rdp-link-color: ${theme.postLinkColor};`)
+
+    styleEl.textContent = `
+:root[data-theme="custom"] {
+${themeVars.join('\n')}
+}
+    `
+  }
+
+  removeCustomTheme () {
+    const styleEl = document.getElementById('custom-theme')
+    if (styleEl) {
+      styleEl.parentNode.removeChild(styleEl)
+    }
   }
 
   createColorBlindFilters () {
@@ -128,8 +201,7 @@ class ThemeSelector extends HTMLElement {
       }
     ]
 
-    // Iterate through each filter and append to defs
-    filters.forEach((filter) => {
+    filters.forEach(filter => {
       const filterElem = document.createElementNS(svgNS, 'filter')
       filterElem.setAttribute('id', filter.id)
       filterElem.setAttribute('color-interpolation-filters', 'linearRGB')

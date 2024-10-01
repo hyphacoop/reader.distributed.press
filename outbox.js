@@ -1,4 +1,5 @@
 import { db } from './dbInstance.js'
+import { applyDefaults } from './defaults.js'
 import './post.js'
 
 class DistributedOutbox extends HTMLElement {
@@ -14,7 +15,9 @@ class DistributedOutbox extends HTMLElement {
     return ['url']
   }
 
-  connectedCallback () {
+  async connectedCallback () {
+    await applyDefaults()
+
     this.outboxUrl = this.getAttribute('url')
     this.loadOutbox(this.outboxUrl)
   }

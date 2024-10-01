@@ -11,3 +11,10 @@ html {
 * {
   box-sizing: border-box;
 }
+
+.loading-text {
+  font-size: 1rem;
+  color: var(--rdp-text-color);
+  text-align: center;
+  margin-top: 20px;
+}
