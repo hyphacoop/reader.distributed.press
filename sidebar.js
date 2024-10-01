@@ -1,22 +1,22 @@
 import './search.js'
 import { applyDefaults } from './defaults.js'
 
-// GitHub API URL for fetching the latest release
-const githubApiUrl = 'https://api.github.com/repos/hyphacoop/reader.distributed.press/releases/latest'
+// The version will now be fetched from the default.json file
+const defaultJsonUrl = './config/defaults.json'
 
 // GitHub Releases Page URL
 const githubReleasesPage = 'https://github.com/hyphacoop/reader.distributed.press/releases'
 
-async function fetchReleaseVersion () {
+async function fetchLocalVersion () {
   try {
-    const response = await fetch(githubApiUrl)
+    const response = await fetch(defaultJsonUrl)
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.statusText}`)
+      throw new Error(`Error fetching defaults.json: ${response.statusText}`)
     }
-    const releaseData = await response.json()
-    return releaseData.tag_name
+    const defaults = await response.json()
+    return defaults.version || 'Unknown Version'
   } catch (error) {
-    console.error('Error fetching release version:', error)
+    console.error('Error fetching local version:', error)
     return 'Unknown Version'
   }
 }
@@ -39,15 +39,15 @@ class SidebarNav extends HTMLElement {
   async connectedCallback () {
     await applyDefaults()
 
-    // Fetch the latest release version and display it in the sidebar
+    // Fetch the local version from defaults.json and display it in the sidebar
     const versionElement = this.querySelector('#release-version')
     if (versionElement) {
-      const releaseVersion = await fetchReleaseVersion()
+      const localVersion = await fetchLocalVersion()
 
       // Create the anchor element
       const versionLink = document.createElement('a')
       versionLink.href = githubReleasesPage
-      versionLink.textContent = `${releaseVersion}`
+      versionLink.textContent = `${localVersion}`
       versionLink.target = '_blank' // Open in a new tab
       versionLink.rel = 'noopener noreferrer' // Security best practices
 
