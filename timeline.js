@@ -94,15 +94,19 @@ class ReaderTimeline extends HTMLElement {
   }
 
   async loadMore () {
+    // Hide loadMore button when fetching new data
     this.loadMoreBtnWrapper.remove()
+
+    // Show loading text while fetching new notes
+    this.appendChild(this.loadingText)
+
+    let notesProcessed = 0
     let count = 0
 
     const sortValue = this.sort === 'random' ? 0 : (this.sort === 'oldest' ? 1 : -1)
 
     // Fetch notes and render them as they become available
-    let notesFound = false
     for await (const note of db.searchNotes({ timeline: 'following' }, { skip: this.skip, limit: this.limit, sort: sortValue })) {
-      notesFound = true
       console.log('Loading note:', note)
 
       // Exclude replies from appearing in the timeline
@@ -110,30 +114,28 @@ class ReaderTimeline extends HTMLElement {
         this.appendNoteElement(note)
         count++
       }
+      notesProcessed++
     }
 
-    if (notesFound) {
-      this.removeChild(this.loadingText) // Remove loading text when notes are found
+    // Remove loading text once fetching is done
+    if (this.contains(this.loadingText)) {
+      this.removeChild(this.loadingText)
     }
 
-    this.updateHasMore(count, sortValue)
+    this.updateHasMore(count, notesProcessed, sortValue)
     this.appendLoadMoreIfNeeded() // Ensure this is called even if no notes are found
   }
 
-  updateHasMore (count, sortValue) {
-    this.skip += count
+  updateHasMore (count, notesProcessed, sortValue) {
+    this.skip += notesProcessed
 
     if (this.sort === 'random') {
       // For random, we need to compare against the total number of notes
       this.loadedNotesCount += count
       this.hasMoreItems = this.loadedNotesCount < this.totalNotesCount
     } else {
-      // In the "newest" timeline, check if we have exactly `this.limit` notes
-      if (sortValue === -1) { // Newest first
-        this.hasMoreItems = count === this.limit
-      } else if (sortValue === 1) { // Oldest first
-        this.hasMoreItems = count > 0 // As long as we're receiving notes, assume there are more
-      }
+      // For other sorts, check if the fetched notes are less than the limit
+      this.hasMoreItems = notesProcessed === this.limit
     }
   }
 
