@@ -18,6 +18,10 @@
   --rdp-border-color: #71717a;
 }
 
+:root[data-theme="custom"] {
+  /* Variables will be injected via defaults.js */
+}
+
 :root[data-theme="deuteranomaly"] {
   --bg-color: #ffffff;
   --rdp-bg-color: #ebf3f5;
