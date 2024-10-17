@@ -15,6 +15,8 @@ You can easily deploy a customized version of the reader by [forking](https://gi
   - `postLinkColor`: Color for links within posts.
 - `defaultFollowedActors`: A list of URLs representing the actors that will be followed by default when no actors are followed.
 
+> The `@announcements@social.distributed.press` account will notify when a new site is published, created using the Social Inbox (https://github.com/hyphacoop/social.distributed.press/).
+
 ### Example `defaults.json`:
 
 ```json
@@ -28,6 +30,7 @@ You can easily deploy a customized version of the reader by [forking](https://gi
     "postLinkColor": "#0ea5e9"
   },
   "defaultFollowedActors": [
+    "https://social.distributed.press/v1/@announcements@social.distributed.press/",
     "https://mastodon.social/@akhileshthite"
   ]
 }
